@@ -114,12 +114,23 @@ turns it on. Omarchy never runs a plugin's own scripts when it adds one, so the
 second line is a separate step. It:
 
 - links the `taskchy` command into `~/.local/bin/taskchy` (the app itself
-  doesn't need it; you and your agents do),
-- links the Claude Code skill into `~/.claude/skills/taskchy` (only if you use
-  Claude Code),
+  doesn't need it; you and your agents do), a link back into the plugin
+  folder, so updates reach it too,
 - creates the notes folder, `~/Documents/Taskchy`.
 
-Both are links back into the plugin folder, so updates reach them too.
+It never replaces a file, folder or link that isn't Taskchy's own.
+
+The Claude Code skill is opt-in. To have Claude plan and log its work in
+Taskchy, add `--claude-skill`:
+
+```sh
+~/.config/omarchy/plugins/taskchy/install.sh --claude-skill
+```
+
+That installs a **copy** of `agent/taskchy/` in `~/.claude/skills/taskchy`.
+Being a copy, plugin updates never change the instructions your agents load;
+run the command again when you want the latest version of the skill. It won't
+replace a skill of the same name that Taskchy didn't install.
 
 Open Taskchy with:
 
@@ -146,7 +157,8 @@ change afterwards, restart the shell with `omarchy-restart-shell`.
 
 ```sh
 omarchy plugin remove taskchy
-rm ~/.local/bin/taskchy ~/.claude/skills/taskchy
+rm ~/.local/bin/taskchy
+rm -r ~/.claude/skills/taskchy   # if you installed the skill
 ```
 
 Your todos stay in `~/Documents/Taskchy`.
@@ -165,8 +177,9 @@ git clone https://github.com/DasPoxy/taskchy.git ~/taskchy
 ~/taskchy/install.sh
 ```
 
-`install.sh` links your copy in as the plugin (and the `taskchy` command and
-Claude Code skill to it), so what you edit is what runs. After an edit,
+`install.sh` links your copy in as the plugin (and the `taskchy` command to
+it), so what you edit is what runs (add `--claude-skill` for the skill, and
+re-run it after editing the skill). After an edit,
 `omarchy-restart-shell` loads it. To pick up new Taskchy versions, run
 `git pull` in your copy; git merges them with your tweaks.
 
