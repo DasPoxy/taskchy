@@ -87,6 +87,19 @@ agent can't overwrite each other.
   projects into Taskchy and log its work there. `agent/AGENTS.md` is the same
   instructions for any other agent.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Todo tab: todos in super groups and groups, and the selected todo's sub-todos](docs/screenshots/todo.png) | ![Task Log: to do / in progress / done lanes, and the log an agent is writing](docs/screenshots/task-log.png) |
+| **Todo:** groups, super groups and each todo's sub-todos | **Task Log:** the lanes, and Claude's log of its work |
+| ![The log across every todo, grouped by super group, group and todo](docs/screenshots/log-by-group.png) | ![Progress: percentages for every super group, group and todo, and the archive](docs/screenshots/progress.png) |
+| **Log views:** every todo's log, by super group › group › todo | **Progress:** how far along everything is, and the archive |
+| ![A sub-todo opened full size, with a picture attached](docs/screenshots/sub-todo.png) | ![Settings: background opacity and tint](docs/screenshots/settings.png) |
+| **Sub-todos:** open one full size, with its pictures | **Settings:** background opacity and tint |
+
+![Every key, from the ? sheet](docs/screenshots/keys.png)
+
 ## Install
 
 You need Omarchy (with its shell, `omarchy-shell`) and Python 3.
