@@ -9,6 +9,8 @@ command, so you can watch an agent's work move across the board as it happens.
 Everything is stored as plain markdown files, so any notes app or text editor
 can read and edit your todos too.
 
+I figured some might be interested but didn't want a cartoon slime theme and so Taskchy was born.
+
 ![Taskchy overview: the Todo tab, an agent planning and logging a project live, Progress and the archive, and the settings](docs/overview.gif)
 
 Taskchy started as a standalone fork of Slime Shell's Slime-Tasks. It has the
