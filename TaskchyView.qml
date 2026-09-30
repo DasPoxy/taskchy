@@ -1039,6 +1039,8 @@ Item {
     if (showHelp) {
       // the keys sheet takes the keys while it's up
       if (k === Qt.Key_Escape || txt === "q") showHelp = false
+      else if (k === Qt.Key_Left || txt === "h" || k === Qt.Key_Backtab) { helpSection = (helpSection + helpSections.length - 1) % helpSections.length; helpFlick.contentY = 0 }
+      else if (k === Qt.Key_Right || txt === "l" || k === Qt.Key_Tab) { helpSection = (helpSection + 1) % helpSections.length; helpFlick.contentY = 0 }
       else if (k === Qt.Key_Down || txt === "j") helpFlick.flick(0, -700)
       else if (k === Qt.Key_Up || txt === "k") helpFlick.flick(0, 700)
       else if (k === Qt.Key_PageDown || k === Qt.Key_Space) helpFlick.flick(0, -2200)
@@ -3293,76 +3295,101 @@ Item {
     radius: tasks.rad
     MouseArea { anchors.fill: parent; onClicked: tasks.showHelp = false }
   }
+  // one section at a time (the tab you're on first): chips or ← → switch
+  property int helpSection: 0
+  readonly property var helpSections: [
+    ["Everywhere", [["Tab  1 2 3", "switch tabs"], ["?", "this help"], [",", "settings"], ["Esc", "back out, or close Taskchy"], ["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
+    ["Todo · list", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
+                     ["Space", "mark finished"], ["e  F2", "rename"], ["g  right-click", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
+                     ["J K  Shift ↑↓  drag", "move a todo (drag: into another group, too)"], ["←  z", "fold its group"], ["L", "jump to its log"]]],
+    ["Group & super group headings", [["Enter  Space  →  ←  click", "fold / unfold"], ["e", "rename"], ["d d", "delete (todos / groups are kept)"], ["A", "archive everything in it"],
+                                      ["g  right-click", "menu: archive, rename, delete, into / out of a super group"], ["n  in the g menu", "new group / new super group"]]],
+    ["Todo · sub-todos", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it (c copy · e edit)"], ["p", "add a picture"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
+                          ["d", "delete"], ["J K  Shift ↑↓  drag", "move"], ["←  Esc", "back to the list"]]],
+    ["Task Log", [["↑ ↓", "pick a todo"], ["→  Enter", "into its lanes, then ↓ on into the log"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Tab  Shift+Tab", "hop lanes"],
+                  ["Enter", "open a sub-todo or entry"], ["c  e", "copy / edit an entry"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"],
+                  ["←  z  /  →  Enter", "fold / unfold a section"], ["L", "jump to the highlighted thing's section of the log"], ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"],
+                  ["click / right-click a lane item", "move it on / back"]]],
+    ["Progress", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["A", "archive"], ["↓ past the end", "into the archive"],
+                  ["/", "search the archive"], ["Enter  r", "restore (you stay in the archive)"], ["r  on a heading", "restore the whole group / super group"], ["g  right-click", "group, restore or delete an archived list"], ["↑ at the top  Esc", "back up"]]]
+          ]
+  onShowHelpChanged: if (showHelp) { helpSection = tab === "log" ? 4 : tab === "progress" ? 5 : 1; helpFlick.contentY = 0 }
   Rectangle {
     visible: tasks.showHelp
     z: 60
     anchors.centerIn: parent
-    width: Math.min(parent.width - 40, tasks.px(760))
-    height: Math.min(parent.height - 40, helpFlick.contentHeight + 30)
+    width: Math.min(parent.width - 40, tasks.px(720))
+    height: Math.min(parent.height - 40, helpHead.height + helpFlick.contentHeight + helpFoot.implicitHeight + 46)
     radius: tasks.rad
     color: tasks.solid
     border.color: Color.menu.border
     border.width: 1
     MouseArea { anchors.fill: parent; onClicked: tasks.showHelp = false }
+    Flow {
+      id: helpHead
+      x: 16; y: 14
+      width: parent.width - 32
+      spacing: 6
+      Repeater {
+        model: tasks.helpSections
+        Btn {
+          required property var modelData
+          required property int index
+          text: modelData[0]
+          size: 10
+          on: tasks.helpSection === index
+          onClicked: { tasks.helpSection = index; helpFlick.contentY = 0 }
+        }
+      }
+    }
     Flickable {
       id: helpFlick
-      x: 18; y: 15
-      width: parent.width - 36
-      height: parent.height - 30
+      x: 16; y: helpHead.y + helpHead.height + 12
+      width: parent.width - 32
+      height: Math.max(0, parent.height - y - helpFoot.implicitHeight - 22)
       clip: true
-      contentHeight: helpText.implicitHeight
+      contentHeight: helpGrid.implicitHeight
       boundsBehavior: Flickable.StopAtBounds
-      Column {
-        id: helpText
+      // key | what it does, two pairs to a row
+      Grid {
+        id: helpGrid
         width: helpFlick.width
-        spacing: 12
+        columns: width > tasks.px(520) ? 2 : 1
+        columnSpacing: 20
+        rowSpacing: 6
         Repeater {
-          model: [
-            ["Everywhere", [["Tab  1 2 3", "switch tabs"], ["?", "this help"], [",", "settings"], ["Esc", "back out, or close Taskchy"], ["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
-            ["Todo · list", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
-                             ["Space", "mark finished"], ["e  F2", "rename"], ["g  right-click", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
-                             ["J K  Shift ↑↓  drag", "move a todo (drag: into another group, too)"], ["←  z", "fold its group"], ["L", "jump to its log"]]],
-            ["Group & super group headings", [["Enter  Space  →  ←  click", "fold / unfold"], ["e", "rename"], ["d d", "delete (todos / groups are kept)"], ["A", "archive everything in it"],
-                                              ["g  right-click", "menu: archive, rename, delete, into / out of a super group"], ["n  in the g menu", "new group / new super group"]]],
-            ["Todo · sub-todos", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it (c copy · e edit)"], ["p", "add a picture"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
-                                  ["d", "delete"], ["J K  Shift ↑↓  drag", "move"], ["←  Esc", "back to the list"]]],
-            ["Task Log", [["↑ ↓", "pick a todo"], ["→  Enter", "into its lanes, then ↓ on into the log"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Tab  Shift+Tab", "hop lanes"],
-                          ["Enter", "open a sub-todo or entry"], ["c  e", "copy / edit an entry"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"],
-                          ["←  z  /  →  Enter", "fold / unfold a section"], ["L", "jump to the highlighted thing's section of the log"], ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"],
-                          ["click / right-click a lane item", "move it on / back"]]],
-            ["Progress", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["A", "archive"], ["↓ past the end", "into the archive"],
-                          ["/", "search the archive"], ["Enter  r", "restore (you stay in the archive)"], ["r  on a heading", "restore the whole group / super group"], ["g  right-click", "group, restore or delete an archived list"], ["↑ at the top  Esc", "back up"]]]
-          ]
-          Column {
+          model: (tasks.helpSections[tasks.helpSection] || ["", []])[1]
+          Row {
             required property var modelData
-            width: helpText.width
-            spacing: 5
-            Heading { text: parent.modelData[0] }
-            Flow {
-              width: parent.width
-              spacing: 4
-              Repeater {
-                model: parent.parent.modelData[1]
-                Row {
-                  required property var modelData
-                  rightPadding: 18
-                  spacing: 7
-                  Text { text: parent.modelData[0]; color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(11); font.bold: true }
-                  Text { text: parent.modelData[1]; color: tasks.dim; font.family: tasks.font; font.pixelSize: tasks.px(11) }
-                }
-              }
+            width: (helpGrid.width - (helpGrid.columns - 1) * helpGrid.columnSpacing) / helpGrid.columns
+            spacing: 8
+            readonly property real keyW: Math.min(tasks.px(130), width * 0.42)
+            Text {
+              width: parent.keyW
+              wrapMode: Text.Wrap
+              text: parent.modelData[0]
+              color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(11); font.bold: true
+            }
+            Text {
+              width: parent.width - parent.keyW - 8
+              wrapMode: Text.Wrap
+              text: parent.modelData[1]
+              color: tasks.dim; font.family: tasks.font; font.pixelSize: tasks.px(11)
             }
           }
         }
-        Text {
-          width: parent.width
-          wrapMode: Text.Wrap
-          text: "Text boxes: Enter saves, Esc leaves. Your todos are plain markdown in " + tasks.shortPath(tasks.folder)
-            + " — agents and scripts use the same data through `taskchy` (taskchy --help)."
-          color: tasks.faint
-          font.family: tasks.font; font.pixelSize: tasks.px(10.5) }
       }
     }
+    Text {
+      id: helpFoot
+      x: 16
+      anchors.bottom: parent.bottom; anchors.bottomMargin: 12
+      width: parent.width - 32
+      wrapMode: Text.Wrap
+      text: "← → sections · ↑↓ scroll · Esc or ? closes · text boxes: Enter saves, Esc leaves · todos are plain markdown in "
+        + tasks.shortPath(tasks.folder) + " (agents: taskchy --help)"
+      color: tasks.faint
+      font.family: tasks.font; font.pixelSize: tasks.px(10) }
   }
 
   // ================================================== a picture, shown big
