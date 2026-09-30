@@ -9,6 +9,8 @@ command, so you can watch an agent's work move across the board as it happens.
 Everything is stored as plain markdown files, so any notes app or text editor
 can read and edit your todos too.
 
+![Taskchy overview: the Todo tab, an agent planning and logging a project live, Progress and the archive, and the settings](docs/overview.gif)
+
 Taskchy started as a standalone fork of Slime Shell's Slime-Tasks. It has the
 same features, a plain Omarchy look, and doesn't need Slime Shell.
 

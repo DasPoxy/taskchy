@@ -38,6 +38,9 @@ Item {
   readonly property real fs: Style.fontScale
   readonly property int rad: Math.max(6, Style.cornerRadius)
   function px(n) { return Math.round(n * fs) }
+  // a path with your home folder shown as ~
+  readonly property string home: Quickshell.env("HOME") || ""
+  function shortPath(p) { return home && (p === home || p.indexOf(home + "/") === 0) ? "~" + p.slice(home.length) : p }
   // where a row's group-colour bar sits (inside its rounded end)
   readonly property real barX: Math.min(10, Math.round(rad * 0.45))
   function tint(c, o) { return Util.alpha(c, o) }
@@ -994,7 +997,10 @@ Item {
   }
 
   // ---- keyboard --------------------------------------------------------------------
-  Keys.onPressed: event => {
+  Keys.onPressed: event => tasks.handleKey(event)
+  // every key the view takes; a plain function, so a script can drive it too
+  // (anything with key / text / modifiers / accepted will do for `event`)
+  function handleKey(event) {
     var k = event.key, txt = event.text
     if (viewEntry) {
       // the entry viewer takes the keys while it's open
@@ -1366,7 +1372,8 @@ Item {
       font.family: tasks.font
       font.pixelSize: tasks.px(12)
       clip: true
-      Keys.onReturnPressed: {
+      // (Enter; also emitted by a script calling input.accepted())
+      onAccepted: {
         var t = text.trim()
         if (field.clearOnEnter) text = ""
         if (t !== "") field.accepted(t)
@@ -1550,7 +1557,7 @@ Item {
         text: tasks.error !== "" ? "  " + tasks.error
           : tasks.armedGroup !== "" ? "d again: delete group " + tasks.armedGroup + " (its todos are kept)"
           : tasks.armedSuper !== "" ? "d again: delete super group " + tasks.armedSuper + " (its groups are kept)"
-          : tasks.folder.replace(/^\/home\/[^/]+/, "~")
+          : tasks.shortPath(tasks.folder)
         color: tasks.error !== "" || tasks.armedGroup !== "" || tasks.armedSuper !== "" ? tasks.urgent : tasks.faint
         font.family: tasks.font; font.pixelSize: tasks.px(11)
       }
@@ -3350,7 +3357,7 @@ Item {
         Text {
           width: parent.width
           wrapMode: Text.Wrap
-          text: "Text boxes: Enter saves, Esc leaves. Your todos are plain markdown in " + tasks.folder.replace(/^\/home\/[^/]+/, "~")
+          text: "Text boxes: Enter saves, Esc leaves. Your todos are plain markdown in " + tasks.shortPath(tasks.folder)
             + " — agents and scripts use the same data through `taskchy` (taskchy --help)."
           color: tasks.faint
           font.family: tasks.font; font.pixelSize: tasks.px(10.5) }
