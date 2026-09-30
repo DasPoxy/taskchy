@@ -25,9 +25,13 @@ Item {
 
   // ---- look: everything follows the Omarchy theme --------------------------------
   readonly property color fg: Color.menu.text
-  readonly property color bg: Color.menu.background
-  // pop-ups over the page: the same colour, but solid (themes often make it see-through)
-  readonly property color solid: Qt.rgba(bg.r, bg.g, bg.b, 1)
+  // the card's colour: the theme's panel colour (or black, a setting) at the
+  // opacity the settings pick
+  readonly property color base: tintMode === "black" ? Qt.rgba(0, 0, 0, 1)
+    : Qt.rgba(Color.menu.background.r, Color.menu.background.g, Color.menu.background.b, 1)
+  readonly property color bg: Qt.rgba(base.r, base.g, base.b, cardOpacity)
+  // pop-ups over the page: the same colour, but solid
+  readonly property color solid: base
   readonly property color accent: Color.accent
   readonly property color urgent: Color.urgent
   readonly property string font: Style.font.family
@@ -83,6 +87,55 @@ Item {
   property int subIndex: 0
   property bool showDone: true
   property bool showHelp: false
+  property bool showSettings: false
+  property int settingsIndex: 0
+
+  // ---- settings (the gear, or ,) -------------------------------------------------
+  // opacity-mode  "hyprland": the opacity Hyprland gives windows (decoration:active_opacity)
+  //               "theme":    the theme's own panel transparency
+  //               "full":     fully solid
+  // tint-mode     "theme": the theme's panel colour · "black": black
+  readonly property string opacityMode: ui && (ui["opacity-mode"] === "full" || ui["opacity-mode"] === "theme") ? ui["opacity-mode"] : "hyprland"
+  readonly property string tintMode: ui && ui["tint-mode"] === "black" ? "black" : "theme"
+  property real hyprOpacity: 1
+  readonly property real cardOpacity: opacityMode === "full" ? 1 : opacityMode === "theme" ? Color.menu.background.a : hyprOpacity
+  readonly property var settingsItems: [
+    { key: "opacity-mode", value: "hyprland", section: "Background opacity", label: "Hyprland window opacity", detail: "same as your windows · " + Math.round(hyprOpacity * 100) + "%" },
+    { key: "opacity-mode", value: "theme", label: "Theme transparency", detail: "the theme's own panel see-through · " + Math.round(Color.menu.background.a * 100) + "%" },
+    { key: "opacity-mode", value: "full", label: "Full opacity", detail: "solid, nothing shows through · 100%" },
+    { key: "tint-mode", value: "theme", section: "Background tint", label: "Theme", detail: "the theme's panel colour" },
+    { key: "tint-mode", value: "black", label: "Black", detail: "a black background, whatever the theme" }
+  ]
+  function settingValue(key) { return key === "opacity-mode" ? opacityMode : tintMode }
+  function applySetting(it) {
+    if (!it) return
+    var m = Object.assign({}, ui)
+    m[it.key] = it.value
+    ui = m
+  }
+  function openSettings() {
+    showHelp = false
+    settingsIndex = 0
+    for (var i = 0; i < settingsItems.length; i++)
+      if (settingsItems[i].key === "opacity-mode" && settingsItems[i].value === opacityMode) settingsIndex = i
+    showSettings = true
+    forceActiveFocus()
+  }
+  Process {
+    id: hyprOpacityReader
+    running: true
+    command: ["hyprctl", "getoption", "decoration:active_opacity", "-j"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          var v = Number(JSON.parse(text).float)
+          if (isFinite(v) && v > 0) tasks.hyprOpacity = Math.min(1, v)
+        } catch (e) {}
+      }
+    }
+  }
+  // re-read it every time Taskchy opens (Hyprland's setting may have changed)
+  onActiveChanged: if (active) hyprOpacityReader.running = true
   property string armedDelete: ""             // press delete twice
   property var expanded: ({})                 // progress tab: "g:<group>" / "t:<id>"
   property int progressIndex: 0
@@ -967,6 +1020,15 @@ Item {
       event.accepted = true
       return
     }
+    if (showSettings) {
+      // the settings pop-up takes the keys while it's up
+      if (k === Qt.Key_Escape || txt === "," || txt === "q") showSettings = false
+      else if (k === Qt.Key_Up || txt === "k") settingsIndex = Math.max(0, settingsIndex - 1)
+      else if (k === Qt.Key_Down || txt === "j") settingsIndex = Math.min(settingsItems.length - 1, settingsIndex + 1)
+      else if (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) applySetting(settingsItems[settingsIndex])
+      event.accepted = true; return
+    }
+    if (txt === ",") { openSettings(); event.accepted = true; return }
     if (txt === "?") { showHelp = !showHelp; event.accepted = true; return }
     if (showHelp) {
       // the keys sheet takes the keys while it's up
@@ -1493,6 +1555,12 @@ Item {
         font.family: tasks.font; font.pixelSize: tasks.px(11)
       }
       Btn { icon: ""; text: "keys  ?"; size: 10; on: tasks.showHelp; onClicked: tasks.showHelp = !tasks.showHelp }
+      Btn {
+        id: settingsBtn
+        icon: ""; text: "settings  ,"; size: 10
+        on: tasks.showSettings
+        onClicked: { if (tasks.showSettings) tasks.showSettings = false; else tasks.openSettings() }
+      }
       Btn { icon: ""; size: 10; onClicked: if (tasks.closeRequest) tasks.closeRequest() }
     }
   }
@@ -1566,7 +1634,7 @@ Item {
     else h = progressPane === "archive"
       ? "↑↓ pick · Enter r restore · g menu · / search · ← z fold · ↑ Esc back"
       : "↑↓ pick · Enter expand · → ← open / fold · A archive · / search the archive · ↓ past the end: archive"
-    return h + "   ·   Tab tabs · ? keys · Esc close"
+    return h + "   ·   Tab tabs · ? keys · , settings · Esc close"
   }
   Rectangle {
     y: tasks.height - tasks.footerH
@@ -3128,6 +3196,87 @@ Item {
     }
   }
 
+  // ================================================================ settings
+  MouseArea {
+    anchors.fill: parent
+    z: 54
+    visible: tasks.showSettings
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
+    onClicked: { tasks.showSettings = false; tasks.forceActiveFocus() }
+  }
+  Rectangle {
+    id: settingsPop
+    visible: tasks.showSettings
+    z: 55
+    anchors.right: parent.right
+    y: tasks.headerH + 2
+    width: tasks.px(330)
+    height: settingsCol.implicitHeight + 24
+    radius: tasks.rad
+    color: tasks.solid
+    border.color: Color.menu.border
+    border.width: 1
+    MouseArea { anchors.fill: parent }
+    Column {
+      id: settingsCol
+      x: 12; y: 12
+      width: parent.width - 24
+      spacing: 4
+      Repeater {
+        model: tasks.settingsItems
+        Column {
+          id: opt
+          required property var modelData
+          required property int index
+          readonly property bool chosen: tasks.settingValue(modelData.key) === modelData.value
+          readonly property bool here: tasks.settingsIndex === index
+          width: settingsCol.width
+          spacing: 4
+          Heading { visible: !!opt.modelData.section; text: opt.modelData.section || ""; topPadding: opt.index > 0 ? 8 : 0; bottomPadding: 2 }
+          Rectangle {
+            width: parent.width
+            height: optCol.implicitHeight + 14
+            radius: Math.max(4, tasks.rad - 2)
+            color: tasks.rowColor(opt.here, false, optMouse.containsMouse, "transparent")
+            border.color: opt.here ? tasks.accent : "transparent"
+            border.width: 1
+            Rectangle {
+              id: radio
+              x: 10; anchors.verticalCenter: parent.verticalCenter
+              width: tasks.px(14); height: width; radius: width / 2
+              color: "transparent"
+              border.color: opt.chosen ? tasks.accent : tasks.tint(tasks.fg, 0.45); border.width: 1.5
+              Rectangle { anchors.centerIn: parent; visible: opt.chosen; width: parent.width - 6; height: width; radius: width / 2; color: tasks.accent }
+            }
+            Column {
+              id: optCol
+              x: radio.x + radio.width + 10
+              width: parent.width - x - 10
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 2
+              Text { text: opt.modelData.label; color: opt.chosen ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(12); font.bold: opt.chosen }
+              Text { text: opt.modelData.detail; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10) }
+            }
+            MouseArea {
+              id: optMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: { tasks.settingsIndex = opt.index; tasks.applySetting(opt.modelData); tasks.forceActiveFocus() }
+            }
+          }
+        }
+      }
+      Text {
+        width: parent.width
+        topPadding: 6
+        wrapMode: Text.Wrap
+        text: "↑↓ pick · Enter choose · Esc close"
+        color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10)
+      }
+    }
+  }
+
   // ================================================================ keys help
   Rectangle {
     anchors.fill: parent
@@ -3162,7 +3311,7 @@ Item {
         spacing: 12
         Repeater {
           model: [
-            ["Everywhere", [["Tab  1 2 3", "switch tabs"], ["?", "this help"], ["Esc", "back out, or close Taskchy"], ["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
+            ["Everywhere", [["Tab  1 2 3", "switch tabs"], ["?", "this help"], [",", "settings"], ["Esc", "back out, or close Taskchy"], ["Shift ↑↓", "move the highlighted todo, sub-todo, group or log section"]]],
             ["Todo · list", [["↑ ↓  j k", "pick a todo"], ["→  Enter", "open its sub-todos"], ["n", "new todo"], ["a", "add a sub-todo"],
                              ["Space", "mark finished"], ["e  F2", "rename"], ["g  right-click", "group menu"], ["A", "archive"], ["d d", "delete"], ["f", "show / hide finished"],
                              ["J K  Shift ↑↓  drag", "move a todo (drag: into another group, too)"], ["←  z", "fold its group"], ["L", "jump to its log"]]],

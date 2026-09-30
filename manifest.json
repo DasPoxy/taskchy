@@ -3,7 +3,7 @@
   "id": "taskchy",
   "name": "Taskchy",
   "version": "0.1.0",
-  "author": "bobino",
+  "author": "DasPoxy",
   "license": "MIT",
   "description": "Todos, sub-todos, a live task log and progress, fully keyboard driven and themed by your Omarchy theme. Agents drive it too, through the taskchy CLI.",
   "kinds": [

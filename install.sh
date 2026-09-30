@@ -34,5 +34,5 @@ cat <<'MSG'
 
 Open it with:   omarchy-shell shell toggle taskchy '{}'
 A key for it, in ~/.config/hypr/bindings.lua:
-  o.bind("SUPER + ALT + T", "Taskchy", "omarchy-shell shell toggle taskchy '{}'")
+  o.bind("SUPER + CTRL + ALT + RETURN", "Taskchy", "omarchy-shell shell toggle taskchy '{}'")
 MSG

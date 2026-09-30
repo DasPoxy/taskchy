@@ -64,7 +64,8 @@ Item {
       height: Math.min(Style.space(820), panel.height - Style.gapsOut * 2 - 60)
       anchors.centerIn: parent
       radius: Style.cornerRadius
-      color: Color.menu.background
+      // colour and opacity are settings (the gear): see TaskchyView's settings
+      color: view.bg
       borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.space(2)))
       padding: Style.spacing.panelPadding
 
