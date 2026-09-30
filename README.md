@@ -151,16 +151,26 @@ rm ~/.local/bin/taskchy ~/.claude/skills/taskchy
 
 Your todos stay in `~/Documents/Taskchy`.
 
-### Hacking on Taskchy
+### Personal tweaks
 
-Clone it anywhere and run its `install.sh`; from outside the plugins folder
-it also links that checkout in as the plugin and enables it, so your edits
-are what runs:
+Want to change how Taskchy looks or works just for yourself? Don't edit the
+installed copy in `~/.config/omarchy/plugins/taskchy`: the next
+`omarchy plugin update` would overwrite your changes. Keep your own copy
+instead, and have Omarchy run that:
 
 ```sh
+omarchy plugin remove taskchy
 git clone https://github.com/DasPoxy/taskchy.git ~/Work/taskchy
 ~/Work/taskchy/install.sh
 ```
+
+`install.sh` links your copy in as the plugin (and the `taskchy` command and
+Claude Code skill to it), so what you edit is what runs. After an edit,
+`omarchy-restart-shell` loads it. To pick up new Taskchy versions, run
+`git pull` in your copy; git merges them with your tweaks.
+
+To go back to the normal install, run `omarchy plugin remove taskchy` and then
+the two install lines above.
 
 ## Where it's stored
 

@@ -6,7 +6,7 @@
 #
 # After `omarchy plugin add`, run it from the plugin's folder:
 #   ~/.config/omarchy/plugins/taskchy/install.sh
-# From a checkout elsewhere (for hacking on Taskchy), it also links that
+# From a copy elsewhere (for personal tweaks), it also links that
 # checkout in as the plugin and enables it.
 set -euo pipefail
 
