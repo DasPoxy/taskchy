@@ -156,12 +156,13 @@ Your todos stay in `~/Documents/Taskchy`.
 Want to change how Taskchy looks or works just for yourself? Don't edit the
 installed copy in `~/.config/omarchy/plugins/taskchy`: the next
 `omarchy plugin update` would overwrite your changes. Keep your own copy
-instead, and have Omarchy run that:
+instead, and have Omarchy run that. Put it wherever you like (`~/taskchy`
+below is just an example):
 
 ```sh
 omarchy plugin remove taskchy
-git clone https://github.com/DasPoxy/taskchy.git ~/Work/taskchy
-~/Work/taskchy/install.sh
+git clone https://github.com/DasPoxy/taskchy.git ~/taskchy
+~/taskchy/install.sh
 ```
 
 `install.sh` links your copy in as the plugin (and the `taskchy` command and
