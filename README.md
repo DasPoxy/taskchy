@@ -92,18 +92,21 @@ agent can't overwrite each other.
 You need Omarchy (with its shell, `omarchy-shell`) and Python 3.
 
 ```sh
-git clone https://github.com/DasPoxy/taskchy.git ~/Work/taskchy
-~/Work/taskchy/install.sh
+omarchy plugin add https://github.com/DasPoxy/taskchy.git --enable
+~/.config/omarchy/plugins/taskchy/install.sh
 ```
 
-The installer links everything back to that folder, so a later `git pull`
-updates Taskchy in place. It:
+The first line clones Taskchy into `~/.config/omarchy/plugins/taskchy` and
+turns it on. Omarchy never runs a plugin's own scripts when it adds one, so the
+second line is a separate step. It:
 
-- links the plugin into `~/.config/omarchy/plugins/taskchy` and enables it,
-- links the CLI into `~/.local/bin/taskchy`,
+- links the `taskchy` command into `~/.local/bin/taskchy` (the app itself
+  doesn't need it; you and your agents do),
 - links the Claude Code skill into `~/.claude/skills/taskchy` (only if you use
   Claude Code),
 - creates the notes folder, `~/Documents/Taskchy`.
+
+Both are links back into the plugin folder, so updates reach them too.
 
 Open Taskchy with:
 
@@ -117,17 +120,34 @@ To give it a key, add a line to `~/.config/hypr/bindings.lua`:
 o.bind("SUPER + CTRL + ALT + RETURN", "Taskchy", "omarchy-shell shell toggle taskchy '{}'")
 ```
 
-If Taskchy was already open in this session and doesn't show a change after
-an update, restart the shell with `omarchy-restart-shell`.
+### Update
+
+```sh
+omarchy plugin update taskchy
+```
+
+It shows you the changes before applying them. If Taskchy doesn't show a
+change afterwards, restart the shell with `omarchy-restart-shell`.
 
 ### Uninstall
 
 ```sh
-omarchy-shell shell setPluginEnabled taskchy false
-rm ~/.config/omarchy/plugins/taskchy ~/.local/bin/taskchy ~/.claude/skills/taskchy
+omarchy plugin remove taskchy
+rm ~/.local/bin/taskchy ~/.claude/skills/taskchy
 ```
 
 Your todos stay in `~/Documents/Taskchy`.
+
+### Hacking on Taskchy
+
+Clone it anywhere and run its `install.sh`; from outside the plugins folder
+it also links that checkout in as the plugin and enables it, so your edits
+are what runs:
+
+```sh
+git clone https://github.com/DasPoxy/taskchy.git ~/Work/taskchy
+~/Work/taskchy/install.sh
+```
 
 ## Where it's stored
 

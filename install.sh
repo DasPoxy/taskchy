@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-# Install Taskchy from this checkout: the shell plugin, the `taskchy` CLI and
-# (if Claude Code is here) the agent skill — all as links back to this folder,
-# so a `git pull` updates everything.
+# Finish installing Taskchy: links the `taskchy` CLI into ~/.local/bin and (if
+# Claude Code is here) the agent skill into ~/.claude/skills, both pointing back
+# at this folder, so `omarchy plugin update taskchy` (or a `git pull`) updates
+# them too.
+#
+# After `omarchy plugin add`, run it from the plugin's folder:
+#   ~/.config/omarchy/plugins/taskchy/install.sh
+# From a checkout elsewhere (for hacking on Taskchy), it also links that
+# checkout in as the plugin and enables it.
 set -euo pipefail
 
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+plugin_dir="$HOME/.config/omarchy/plugins/taskchy"
 
 link() {
   local target="$1" at="$2"
@@ -17,18 +24,20 @@ link() {
   echo "linked $at -> $target"
 }
 
-link "$here" "$HOME/.config/omarchy/plugins/taskchy"
+# a checkout outside the plugins folder: link it in as the plugin
+if [[ $(readlink -f "$plugin_dir" 2>/dev/null) != "$here" ]]; then
+  link "$here" "$plugin_dir"
+  if command -v omarchy-shell >/dev/null && omarchy-shell shell ping >/dev/null 2>&1; then
+    omarchy-shell shell rescanPlugins >/dev/null || true
+    omarchy-shell shell setPluginEnabled taskchy true >/dev/null || true
+    echo "enabled the taskchy plugin"
+  fi
+fi
+
 link "$here/bin/taskchy" "$HOME/.local/bin/taskchy"
 [[ -d $HOME/.claude ]] && link "$here/agent/taskchy" "$HOME/.claude/skills/taskchy"
 
-taskchy folder >/dev/null
-echo "notes folder: $(taskchy folder | python3 -c 'import json,sys; print(json.load(sys.stdin)["folder"])')"
-
-if command -v omarchy-shell >/dev/null && omarchy-shell shell ping >/dev/null 2>&1; then
-  omarchy-shell shell rescanPlugins >/dev/null || true
-  omarchy-shell shell setPluginEnabled taskchy true >/dev/null || true
-  echo "enabled the taskchy plugin"
-fi
+echo "notes folder: $("$here/bin/taskchy" folder | python3 -c 'import json,sys; print(json.load(sys.stdin)["folder"])')"
 
 cat <<'MSG'
 
