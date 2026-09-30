@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "taskchy",
+  "name": "Taskchy",
+  "version": "0.1.0",
+  "author": "bobino",
+  "license": "MIT",
+  "description": "Todos, sub-todos, a live task log and progress, fully keyboard driven and themed by your Omarchy theme. Agents drive it too, through the taskchy CLI.",
+  "kinds": [
+    "overlay"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Taskchy.qml"
+  }
+}

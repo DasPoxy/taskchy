@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Taskchy from the command line (agents, scripts, you): todos, sub-todos and
+# task logs in ~/Documents/Taskchy. See `taskchy --help`.
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+exec python3 "$here/../taskchy.py" "$@"
