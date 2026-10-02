@@ -1383,6 +1383,11 @@ Item {
         field.entered()
       }
       Keys.onEscapePressed: { text = ""; tasks.forceActiveFocus() }
+      // Enter is handled here, not left to TextInput: it emits accepted() but
+      // passes the key on, so the view's own Enter also ran (opening the
+      // highlighted sub-todo while adding a new one)
+      Keys.onReturnPressed: fieldInput.accepted()
+      Keys.onEnterPressed: fieldInput.accepted()
       Text {
         visible: fieldInput.text === ""
         text: field.placeholder
@@ -1925,6 +1930,7 @@ Item {
             font.pixelSize: tasks.px(15)
             font.bold: true
             Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["rename", tasks.selected.id, text.trim()]); tasks.forceActiveFocus() }
+            Keys.onEnterPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["rename", tasks.selected.id, text.trim()]); tasks.forceActiveFocus() }
             Keys.onEscapePressed: tasks.forceActiveFocus()
           }
         }
@@ -2118,6 +2124,7 @@ Item {
         font.pixelSize: tasks.px(12)
         Rectangle { anchors.fill: parent; anchors.margins: -5; z: -1; radius: Math.max(4, tasks.rad - 2); color: tasks.bg; border.color: tasks.accent; border.width: 1 }
         Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
+        Keys.onEnterPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
         Keys.onEscapePressed: tasks.forceActiveFocus()
       }
     }
@@ -3198,6 +3205,7 @@ Item {
           font.pixelSize: tasks.px(12.5)
           clip: true
           Keys.onReturnPressed: tasks.finishRenameGroup(text.trim())
+          Keys.onEnterPressed: tasks.finishRenameGroup(text.trim())
           Keys.onEscapePressed: { tasks.renamingGroup = ""; tasks.renamingIsSuper = false; tasks.forceActiveFocus() }
         }
       }
