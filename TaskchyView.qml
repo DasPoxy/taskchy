@@ -342,11 +342,24 @@ Item {
     : logEntries
   // an entry's full tag: super group › group › todo  ↳ sub-todo
   function entryGroup(e) { return e.id !== undefined ? e.group : (selected ? selected.group : "") }
+  // a long sub-todo, shortened for the log and progress panels: its first
+  // line, cut after 7-10 words (at a sentence break if there is one, and not
+  // on a dangling "the" / "to" / "that")
+  function brief(text) {
+    var toks = (text || "").split("\n")[0].trim().split(/\s+/), ends = []
+    toks.forEach(function(w, i) { if (/[A-Za-z0-9]/.test(w)) ends.push(i + 1) })   // "+" isn't a word
+    if (ends.length <= 10) return toks.join(" ")
+    var cut = ends[7]
+    for (var n = 10; n >= 7; n--) if (/[.,;:!?]$/.test(toks[ends[n - 1] - 1])) { cut = ends[n - 1]; break }
+    var out = toks.slice(0, cut)
+    while (out.length > 5 && /^(a|an|the|to|of|and|or|that|which|with|for|in|on|at|by|from|is|be|will)$/i.test(out[out.length - 1])) out.pop()
+    return out.join(" ").replace(/[,;:]$/, "") + "…"
+  }
   function entryTag(e) {
     var grp = entryGroup(e)
     var title = e.id !== undefined ? e.title : (selected ? selected.title : "")
     var sup = grp ? superOf(grp) : ""
-    return (sup ? sup + "  \u203a  " : "") + (grp ? grp + "  \u203a  " : "") + title + (e.sub ? "   \u21b3  " + e.sub : "")
+    return (sup ? sup + "  \u203a  " : "") + (grp ? grp + "  \u203a  " : "") + title + (e.sub ? "   \u21b3  " + brief(e.sub) : "")
   }
   // what the log shows: entries, and a heading per section (levels nest)
   readonly property var logDisplay: {
@@ -387,7 +400,7 @@ Item {
       var mine = logEntries.filter(function(e) { return e.sub === sb.text.split("\n")[0].trim() })
       if (!mine.length) return
       var key = sectionKey(sb.text), shut = sectionFolded(key)
-      rows.push({ kind: "head", what: "sub", i: i, sub: sb, key: key, level: 0, label: sb.text, count: mine.length, collapsed: shut })
+      rows.push({ kind: "head", what: "sub", i: i, sub: sb, key: key, level: 0, label: brief(sb.text), count: mine.length, collapsed: shut })
       mine.forEach(function(e) { used[logEntries.indexOf(e)] = true; if (!shut) rows.push({ kind: "entry", e: e, section: i, level: 1 }) })
     })
     var rest = logEntries.filter(function(e, n) { return !used[n] })
@@ -2224,7 +2237,7 @@ Item {
                 id: laneText
                 x: 6; y: 4
                 width: parent.width - 12
-                text: laneItem.modelData.text
+                text: tasks.brief(laneItem.modelData.text)
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
@@ -2343,7 +2356,7 @@ Item {
         icon: ""
         // in the lanes, a note is about the sub-todo you've picked there
         readonly property var about: tasks.logPane === "lanes" && tasks.selected && tasks.selected.subs[tasks.logSub] ? tasks.selected.subs[tasks.logSub] : null
-        placeholder: !tasks.selected ? "pick a todo to write in its log" : about ? "log about “" + about.text + "”…  (w)" : "log…  (w)"
+        placeholder: !tasks.selected ? "pick a todo to write in its log" : about ? "log about “" + tasks.brief(about.text) + "”  (w)" : "log…  (w)"
         onAccepted: t => {
           if (!tasks.selected) return
           var args = ["log", tasks.selected.id, t, "--by", "you"]
@@ -2607,7 +2620,7 @@ Item {
             spacing: 8
             StateBox { state3: prow.modelData.kind === "sub" ? prow.modelData.s.state : "todo"; anchors.verticalCenter: parent.verticalCenter; scale: 0.85 }
             Text {
-              text: prow.modelData.kind === "sub" ? prow.modelData.s.text : ""
+              text: prow.modelData.kind === "sub" ? tasks.brief(prow.modelData.s.text) : ""
               color: tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(11)
               opacity: prow.modelData.kind === "sub" && prow.modelData.s.state === "done" ? 0.5 : 1
               anchors.verticalCenter: parent.verticalCenter
