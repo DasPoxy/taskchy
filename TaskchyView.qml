@@ -1223,6 +1223,8 @@ Item {
       var r = rows[Math.min(progressIndex, rows.length - 1)]
       var na = archivedTodos.length
       if (txt === "/") archiveInput.forceActiveFocus()
+      // a: straight to the first thing in the archive
+      else if (txt === "a" && archiveRows.length) { progressPane = "archive"; archiveIndex = 0 }
       else if (progressPane === "list" && r && r.kind === "super"
                && !(down && !(event.modifiers & Qt.ShiftModifier) && progressIndex >= rows.length - 1 && na)) {
         if ((up || down) && (event.modifiers & Qt.ShiftModifier)) progressFollow = "s:" + r.name
@@ -1668,7 +1670,7 @@ Item {
       : "↑↓ pick · → into the lanes · s log view · w write · L jump to its log"
     else h = progressPane === "archive"
       ? "↑↓ pick · Enter r restore · g menu · / search · ← z fold · ↑ Esc back"
-      : "↑↓ pick · Enter expand · → ← open / fold · A archive · / search the archive · ↓ past the end: archive"
+      : "↑↓ pick · Enter expand · → ← open / fold · A archive · a / ↓ past the end: to the archive · / search it"
     return h + "   ·   Tab tabs · ? keys · , settings · Esc close"
   }
   Rectangle {
@@ -3369,7 +3371,7 @@ Item {
                   ["Enter", "open a sub-todo or entry"], ["c  e", "copy / edit an entry"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"],
                   ["←  z  /  →  Enter", "fold / unfold a section"], ["L", "jump to the highlighted thing's section of the log"], ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"],
                   ["click / right-click a lane item", "move it on / back"]]],
-    ["Progress", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["A", "archive"], ["↓ past the end", "into the archive"],
+    ["Progress", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["A", "archive"], ["↓ past the end", "into the archive"], ["a", "jump to the archive's first item"],
                   ["/", "search the archive"], ["Enter  r", "restore (you stay in the archive)"], ["r  on a heading", "restore the whole group / super group"], ["g  right-click", "group, restore or delete an archived list"], ["↑ at the top  Esc", "back up"]]]
           ]
   onShowHelpChanged: if (showHelp) { helpSection = tab === "log" ? 4 : tab === "progress" ? 5 : 1; helpFlick.contentY = 0 }
