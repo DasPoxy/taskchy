@@ -2,8 +2,8 @@
 
 Drop this into your agent's instructions (AGENTS.md, CLAUDE.md, a system
 prompt…) so it tracks project work in Taskchy. Claude Code users can install
-the skill in `agent/taskchy/` instead (`./install.sh` links it into
-`~/.claude/skills/`).
+the skill in `agent/taskchy/` instead (`./install.sh --claude-skill` copies it
+into `~/.claude/skills/taskchy`).
 
 ---
 
@@ -18,4 +18,7 @@ When the user starts a multi-step project with you, record it in Taskchy
 - Step done: `taskchy finish <id> <n> "result" --by <you>`
 
 n is the step's 0-based position; re-read it before using it (the user can
-reorder steps). Don't archive, delete or mark whole todos done unless asked.
+reorder steps), and pass `--expect "<step text>"` when you change a step
+(`sub-set`, `sub-edit`, `sub-move`, `sub-delete`) so a step that moved is
+refused rather than hit. Don't archive, delete or mark whole todos done
+unless asked, and use the CLI rather than editing the files.

@@ -7,7 +7,9 @@ driven by coding agents (Claude Code or any other) through its `taskchy`
 command, so you can watch an agent's work move across the board as it happens.
 
 Everything is stored as plain markdown files, so any notes app or text editor
-can read and edit your todos too.
+can read and edit your todos too. Taskchy only rewrites the lines it changes,
+so notes, links and lists you add to those files yourself stay as you wrote
+them.
 
 I figured some might be interested but didn't want a cartoon slime theme and so Taskchy was born.
 
@@ -23,6 +25,10 @@ same features, a plain Omarchy look, and doesn't need Slime Shell.
 **Todo:** your todos on the left, the selected todo's sub-todos on the right.
 - Add todos and sub-todos from the boxes at the top of each side.
 - Sub-todos move *to do → in progress → done* (Space, or click the box).
+- Edit a sub-todo inline (e, F2 or double-click), or open it full size for
+  longer text: a sub-todo can run to several lines and paragraphs. What you
+  type is kept when you press Enter, click away or close Taskchy (Esc
+  cancels).
 - Organise todos into **groups** (each with its own colour) and groups into
   **super groups**. Groups and super groups fold away, and they can be
   renamed, reordered, archived or deleted as a whole.
@@ -36,7 +42,8 @@ same features, a plain Omarchy look, and doesn't need Slime Shell.
 **Task Log:** what's being worked on right now.
 - The selected todo's sub-todos sit in *to do / in progress / done* lanes
   across the top. Move them between lanes with the keys or a click (right
-  click moves one back).
+  click moves one back). Long sub-todos show as their first few words here
+  and in the log; open one to read it all.
 - Below is the todo's log: timestamped entries, tagged with who wrote them
   (you, or an agent) and which sub-todo they're about. Write your own from the
   box above the log. Entries are markdown, code blocks included.
@@ -51,15 +58,21 @@ same features, a plain Omarchy look, and doesn't need Slime Shell.
   Expand a todo to see its sub-todos.
 - Archive finished todos (one at a time, or a whole group or super group at
   once).
-- The archive underneath is searchable and grouped the same way. Restore one
-  todo, a whole group or a whole super group.
+- The archive underneath is searchable and grouped the same way (**a** jumps
+  into it). Restore one todo, a whole group or a whole super group, or delete
+  an archived todo for good (d d).
 
 ### Keyboard driven
 
 Everything can be done from the keyboard. Tab or 1 2 3 switch tabs, Esc backs
 out (or closes Taskchy), **?** shows every key, and the bar along the bottom
-always lists the keys for wherever you are. Destructive keys ask twice (press
-d d to delete).
+always lists the keys for wherever you are. Every list scrolls to follow
+the key you're on.
+
+Deleting a todo, an archived todo, a group or a super group asks twice
+(d d). Nothing is gone for good: deleted todos go to the trash with their
+log and pictures, and a deleted sub-todo (one d) is written to a log in the
+trash you can copy it back from.
 
 ### Themed by Omarchy
 
@@ -76,7 +89,10 @@ theme and change when you switch themes. The settings (the gear button, or
 The `taskchy` command is the same backend the app uses. Every command prints
 JSON, and the app re-reads the files every two seconds while it's open, so an
 agent's progress shows up live. Writes are locked and atomic, so you and an
-agent can't overwrite each other.
+agent can't overwrite each other, and every change to a sub-todo can say what
+it expects the sub-todo to read (`--expect`), so one made on a stale view
+(someone reordered the list meanwhile) is refused instead of hitting the
+wrong row. The app does that for you.
 
 - **`taskchy plan`** creates a todo with all its sub-todos in one go, for when
   a project starts in a chat with an agent instead of in Taskchy. Running it
@@ -198,7 +214,8 @@ Taskchy/
   Archive/               archived todos (Archive/Logs/ their logs)
   Attachments/<id>/      pictures on that todo's sub-todos
   .taskchy/groups.json   group colours, order and super groups
-  .taskchy/trash/        deleted todos, kept just in case
+  .taskchy/trash/        deleted todos (with their logs and pictures), and
+                         deleted-sub-todos.md, every sub-todo deleted
 ```
 
 A todo file looks like this:
@@ -213,8 +230,19 @@ created: 2026-09-29 19:07
 
 - [x] a finished sub-todo
 - [/] one in progress
-- [ ] one still to do
+- [ ] one still to do, that runs on
+
+  into a second paragraph (indented under it)
+  ![a picture](../Attachments/taskchy/sketch.png)
+
+Anything else you write here (notes, links, other lists, - [-] items) is
+yours: Taskchy shows the sub-todos and leaves the rest as it is.
 ```
+
+A todo's id is its file name without `.md`. Log entries are headed
+`## <time> · <who> · <sub-todo>`; a line in an entry's text that looks like
+one of those headings is saved as `\## …`, so pasted output can't split an
+entry in two.
 
 View state (folded sections, log view, the background settings) is kept in
 `~/.local/state/taskchy/ui.json`.
@@ -232,8 +260,18 @@ taskchy list                                           # every todo and sub-todo
 taskchy --help                                         # every command
 ```
 
-`<n>` is a sub-todo's position, counting from 0. `--expect "<text>"` makes a
-change refuse if the sub-todo's text changed in the meantime.
+`<n>` is a sub-todo's position, counting from 0. `--expect "<text>"` (on
+`sub-edit`, `sub-set`, `sub-delete`, `sub-move` and `sub-image-remove`) makes
+the change refuse if that sub-todo's text changed in the meantime.
+
+## Development
+
+Tests for the `taskchy` backend run in a throwaway home, never touching your
+todos:
+
+```sh
+python3 -m unittest discover -s tests
+```
 
 ## License
 

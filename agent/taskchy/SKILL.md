@@ -43,15 +43,20 @@ into Taskchy before you begin:
 `<n>` is the sub-todo's 0-based position. The user may reorder sub-todos in
 the app while you work, so re-read positions (`taskchy find`, or the JSON a
 command returns) instead of trusting old numbers, and pass
-`--expect "<sub-todo text>"` to `sub-set` so a changed row is refused rather
-than hit.
+`--expect "<sub-todo text>"` whenever you change one (`sub-set`, `sub-edit`,
+`sub-move`, `sub-delete`) so a row that changed is refused rather than hit.
 
 Log what the user would want to glance at later: decisions, results, what
-failed and why, file paths. Keep entries short; markdown and code blocks work.
+failed and why, file paths. Keep entries short; markdown and code blocks work,
+and pasted output is safe (a line that looks like an entry heading is escaped).
+
+Go through `taskchy`, not the markdown files: the user may keep their own
+notes in a todo file, and the CLI changes only the lines it means to.
 
 ## Don't
 
-- Don't archive, delete, rename or regroup the user's todos unless asked.
+- Don't archive, delete, rename or regroup the user's todos unless asked
+  (deleted ones go to `.taskchy/trash/`, but ask first all the same).
 - Don't mark the whole todo `done` — the user does that (finishing every
   sub-todo is enough).
 - Don't plan trivial one-step requests.
