@@ -2294,6 +2294,11 @@ Item {
         clip: true
         spacing: 4
         model: tasks.logRows
+        // keep the picked row (a heading, or the selected todo) in view as the
+        // keyboard moves it, and when the list reloads
+        readonly property int pickIndex: tasks.logNav.indexOf(tasks.logCursor !== "" ? tasks.logCursor : tasks.selectedId)
+        onPickIndexChanged: if (pickIndex >= 0) positionViewAtIndex(pickIndex, ListView.Contain)
+        onCountChanged: Qt.callLater(function() { if (logTodoList.pickIndex >= 0) logTodoList.positionViewAtIndex(logTodoList.pickIndex, ListView.Contain) })
         delegate: Item {
           id: logRow
           required property var modelData
