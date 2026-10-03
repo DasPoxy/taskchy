@@ -138,7 +138,12 @@ Item {
     }
   }
   // re-read it every time Taskchy opens (Hyprland's setting may have changed)
-  onActiveChanged: if (active) hyprOpacityReader.running = true
+  onActiveChanged: {
+    if (active) { hyprOpacityReader.running = true; return }
+    // closing Taskchy keeps what's being typed rather than dropping it
+    if (subEdit.activeFocus) subEdit.commit()
+    if (viewEditing) saveEdit()
+  }
   property string armedDelete: ""             // press delete twice
   property var expanded: ({})                 // progress tab: "g:<group>" / "t:<id>"
   property int progressIndex: 0
@@ -214,7 +219,7 @@ Item {
     var text = viewEditor.text.trim()
     if (text === "" || text === viewEntry.text) { viewEditing = false; forceActiveFocus(); return }
     var before = viewEntry.text, n = viewEntry.n
-    if (viewEntry.isSub) act(["sub-edit", selected.id, String(n), text])
+    if (viewEntry.isSub) act(["sub-edit", selected.id, String(n), text, "--expect", before])
     else act(["log-edit", viewEntry.id !== undefined ? viewEntry.id : selected.id, String(n), text, "--expect", before])
     viewEntry = Object.assign({}, viewEntry, { text: text })
     viewEditing = false
@@ -1125,7 +1130,7 @@ Item {
         else if (txt === "L" && t && n) jumpLogFromTodo("sub", subIndex)
         else if (txt === "p" && t && n) openPicker(t, subIndex)
         else if (txt === "i" && t && n) togglePics(t, t.subs[subIndex])
-        else if ((txt === "e" || k === Qt.Key_F2) && t && n) { subEdit.index = subIndex; subEdit.text = t.subs[subIndex].text; subEdit.forceActiveFocus() }
+        else if ((txt === "e" || k === Qt.Key_F2) && t && n) subEdit.begin(t, subIndex)
         else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex)]); subIndex = Math.max(0, subIndex - 1) }
         else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1)]); subIndex-- }
         else if (txt === "J" && t && subIndex < n - 1) { act(["sub-move", t.id, String(subIndex), String(subIndex + 1)]); subIndex++ }
@@ -2098,7 +2103,7 @@ Item {
               tasks.dropY = -1
             }
             onClicked: { tasks.pane = "subs"; tasks.subIndex = subRow.index; tasks.forceActiveFocus() }
-            onDoubleClicked: { subEdit.index = subRow.index; subEdit.text = subRow.modelData.text; subEdit.forceActiveFocus() }
+            onDoubleClicked: subEdit.begin(tasks.selected, subRow.index)
           }
         }
         Text {
@@ -2123,9 +2128,26 @@ Item {
         font.family: tasks.font
         font.pixelSize: tasks.px(12)
         Rectangle { anchors.fill: parent; anchors.margins: -5; z: -1; radius: Math.max(4, tasks.rad - 2); color: tasks.bg; border.color: tasks.accent; border.width: 1 }
-        Keys.onReturnPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
-        Keys.onEnterPressed: { if (tasks.selected && text.trim() !== "") tasks.act(["sub-edit", tasks.selected.id, String(index), text.trim()]); tasks.forceActiveFocus() }
-        Keys.onEscapePressed: tasks.forceActiveFocus()
+        // the todo and text it was opened on, so the save lands on that row
+        property string todoId: ""
+        property string original: ""
+        function begin(t, i) {
+          if (!t || !t.subs[i]) return
+          todoId = t.id; original = t.subs[i].text
+          index = i; text = original
+          forceActiveFocus()
+        }
+        // saves on Enter, and also when focus goes elsewhere or Taskchy closes
+        function commit() {
+          var v = text.trim(), id = todoId
+          todoId = ""
+          if (id !== "" && v !== "" && v !== original)
+            tasks.act(["sub-edit", id, String(index), v, "--expect", original])
+        }
+        onActiveFocusChanged: if (!activeFocus) commit()
+        Keys.onReturnPressed: { commit(); tasks.forceActiveFocus() }
+        Keys.onEnterPressed: { commit(); tasks.forceActiveFocus() }
+        Keys.onEscapePressed: { todoId = ""; tasks.forceActiveFocus() }
       }
     }
     Text {

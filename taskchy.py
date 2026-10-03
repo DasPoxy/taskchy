@@ -40,7 +40,7 @@ Commands (all print JSON; errors go to stderr with exit status 1):
   done ID true|false                mark a top-level todo finished (or not)
   delete ID                         moves it (and its log) to .taskchy/trash
   sub-add ID TEXT
-  sub-edit ID N TEXT
+  sub-edit ID N TEXT [--expect OLD]
   sub-set ID N todo|doing|done [--expect TEXT]
   sub-delete ID N
   sub-image-add ID N FILE           copy a picture to Attachments/ID/ and attach it to sub-todo N
@@ -675,7 +675,10 @@ def run(argv):
                 raise Fail("a sub-todo needs some text")
             t["subs"].append({"state": "todo", "text": text, "indent": 0})
         elif cmd == "sub-edit":
-            sub_at(t, rest[1])["text"] = " ".join(rest[2:]).strip()
+            s = sub_at(t, rest[1])
+            if opts.get("expect") and s["text"] != opts["expect"]:
+                raise Fail(f"sub-todo {rest[1]} changed meanwhile (it now reads '{s['text']}')")
+            s["text"] = " ".join(rest[2:]).strip()
         elif cmd == "sub-delete":
             s = sub_at(t, rest[1])
             t["subs"].remove(s)
