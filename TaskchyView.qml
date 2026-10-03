@@ -182,7 +182,7 @@ Item {
     if (t && file) act(["sub-image-add", t.id, String(n), String(file)])
   }
   function removePicture(n, k) {
-    if (selected) act(["sub-image-remove", selected.id, String(n), String(k)])
+    if (selected && selected.subs[n]) act(["sub-image-remove", selected.id, String(n), String(k), "--expect", selected.subs[n].text])
     armedPic = -1
   }
   Timer { id: disarmPic; interval: 2500; onTriggered: tasks.armedPic = -1 }
@@ -428,7 +428,7 @@ Item {
     logDisplay.forEach(function(r) { if (r.kind === "head" && r.i >= 0) secs.push(r.i) })
     var at = secs.indexOf(sec), nb = secs[at + dir]
     if (nb === undefined) return
-    act(["sub-move", selected.id, String(sec), String(nb)])
+    act(["sub-move", selected.id, String(sec), String(nb), "--expect", selected.subs[sec].text])
   }
   // ---- folding log sections (per todo and sub-todo, remembered) ----
   function sectionKey(subText) { return "tasks-log-sec:" + selectedId + ":" + subText }
@@ -743,6 +743,9 @@ Item {
           tasks.supersMap = r.supers || ({})
           tasks.superOrderList = r.superOrder || []
           tasks.todos = r.todos
+          // files that couldn't be read are left out: say which
+          if (r.broken && r.broken.length)
+            tasks.error = "couldn't read " + r.broken.map(function(b) { return "Todos/" + b.id + ".md" }).join(", ") + " (" + r.broken[0].error + ")"
           if (tasks.selectedId === "" || !tasks.selected) tasks.selectedId = tasks.todoOrder.length ? tasks.todoOrder[0] : ""
         } catch (e) { tasks.error = "couldn't read the notes folder" }
       }
@@ -895,7 +898,7 @@ Item {
     var st = t.subs[i].state, j = i + dir
     while (j >= 0 && j < t.subs.length && t.subs[j].state !== st) j += dir
     if (j < 0 || j >= t.subs.length) return
-    act(["sub-move", t.id, String(i), String(j)])
+    act(["sub-move", t.id, String(i), String(j), "--expect", t.subs[i].text])
     logSub = j
   }
   // drag state (todos: list rows; subs: sub rows)
@@ -1132,7 +1135,7 @@ Item {
         var n = t ? t.subs.length : 0
         if ((up || down) && (event.modifiers & Qt.ShiftModifier) && t) {
           var to = subIndex + (up ? -1 : 1)
-          if (to >= 0 && to < n) { act(["sub-move", t.id, String(subIndex), String(to)]); subIndex = to }
+          if (to >= 0 && to < n) { act(["sub-move", t.id, String(subIndex), String(to), "--expect", t.subs[subIndex].text]); subIndex = to }
         }
         else if (up) subIndex = Math.max(0, subIndex - 1)
         else if (down) subIndex = Math.min(n - 1, subIndex + 1)
@@ -1144,9 +1147,9 @@ Item {
         else if (txt === "p" && t && n) openPicker(t, subIndex)
         else if (txt === "i" && t && n) togglePics(t, t.subs[subIndex])
         else if ((txt === "e" || k === Qt.Key_F2) && t && n) subEdit.begin(t, subIndex)
-        else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex)]); subIndex = Math.max(0, subIndex - 1) }
-        else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1)]); subIndex-- }
-        else if (txt === "J" && t && subIndex < n - 1) { act(["sub-move", t.id, String(subIndex), String(subIndex + 1)]); subIndex++ }
+        else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex), "--expect", t.subs[subIndex].text]); subIndex = Math.max(0, subIndex - 1) }
+        else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1), "--expect", t.subs[subIndex].text]); subIndex-- }
+        else if (txt === "J" && t && subIndex < n - 1) { act(["sub-move", t.id, String(subIndex), String(subIndex + 1), "--expect", t.subs[subIndex].text]); subIndex++ }
         else return
       }
     } else if (tab === "log") {
@@ -2109,7 +2112,7 @@ Item {
               dragging = false
               var to = target(mouse)
               if (to !== subRow.index && tasks.selected) {
-                tasks.act(["sub-move", tasks.selected.id, String(subRow.index), String(to)])
+                tasks.act(["sub-move", tasks.selected.id, String(subRow.index), String(to), "--expect", subRow.modelData.text])
                 tasks.subIndex = to
               }
               tasks.dragSub = -1
