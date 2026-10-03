@@ -2225,6 +2225,12 @@ Item {
             }
             onModelChanged: keepLane.restart()
             Timer { id: keepLane; interval: 40; onTriggered: laneList.keepPicked() }
+            // ...and as the keyboard moves the pick (up / down, lane to lane)
+            Connections {
+              target: tasks
+              function onLogSubChanged() { laneList.keepPicked() }
+              function onLogPaneChanged() { laneList.keepPicked() }
+            }
             // click moves it a lane on, right-click a lane back
             delegate: Rectangle {
               id: laneItem
