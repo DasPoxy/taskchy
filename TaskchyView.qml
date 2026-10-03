@@ -918,10 +918,10 @@ Item {
     var next = s.state === "todo" ? "doing" : s.state === "doing" ? "done" : "todo"
     act(["sub-set", t.id, String(i), next, "--expect", s.text])
   }
-  function remove(id) {
+  function remove(id, archived) {
     if (armedDelete !== id) { armedDelete = id; disarm.restart(); return }
     armedDelete = ""
-    act(["delete", id])
+    act(archived ? ["delete", id, "--archived"] : ["delete", id])
   }
   Timer { id: disarm; interval: 2500; onTriggered: tasks.armedDelete = "" }
   // the same menu on a group heading: archive or delete the whole group
@@ -1283,6 +1283,8 @@ Item {
         // on an archived todo
         else if (ar && ar.kind === "todo" && (k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space || txt === "r")) restoreArchived(ar.t)
         else if (ar && ar.kind === "todo" && txt === "g") openMenu(ar.t, tasks.width * 0.3, tasks.height - 360, true)
+        // d, then d again: delete it (with its log and pictures, into the trash)
+        else if (ar && ar.kind === "todo" && (txt === "d" || k === Qt.Key_Delete)) remove(ar.t.id, true)
         else if (ar && ar.kind === "todo" && (k === Qt.Key_Left || txt === "h" || txt === "z") && archiveRows.some(function(x) { return x.kind === "head" })) foldArchiveGroupOf(ar.t)
         else if (k === Qt.Key_Escape) progressPane = "list"
         else return
@@ -1669,7 +1671,7 @@ Item {
       : logPane === "entries" ? "↑↓ pick · Enter open · c copy · e edit · ← z fold · s view · w write"
       : "↑↓ pick · → into the lanes · s log view · w write · L jump to its log"
     else h = progressPane === "archive"
-      ? "↑↓ pick · Enter r restore · g menu · / search · ← z fold · ↑ Esc back"
+      ? "↑↓ pick · Enter r restore · d d delete · g menu · / search · ← z fold · ↑ Esc back"
       : "↑↓ pick · Enter expand · → ← open / fold · A archive · a / ↓ past the end: to the archive · / search it"
     return h + "   ·   Tab tabs · ? keys · , settings · Esc close"
   }
@@ -2780,7 +2782,8 @@ Item {
             anchors.leftMargin: (arow.modelData.depth || 0) * 14
             readonly property var t: arow.modelData.kind === "todo" ? arow.modelData.t : ({ id: "", title: "", group: "", counts: { done: 0 }, subs: [] })
             radius: tasks.rad
-            color: tasks.rowColor(arow.here, false, archMouse.containsMouse, "transparent")
+            readonly property bool armed: tasks.armedDelete !== "" && tasks.armedDelete === t.id
+            color: armed ? tasks.armedFill : tasks.rowColor(arow.here, false, archMouse.containsMouse, "transparent")
             border.color: arow.here ? tasks.accent : "transparent"
             border.width: 1
             Rectangle { x: tasks.barX; width: 3; height: parent.height - 12; radius: 1.5; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(archCard.t.group) }
@@ -2788,7 +2791,8 @@ Item {
               x: 20; width: parent.width - restoreBtn.width - 30
               anchors.verticalCenter: parent.verticalCenter
               elide: Text.ElideRight
-              text: archCard.t.title + "  ·  " + archCard.t.counts.done + "/" + archCard.t.subs.length
+              text: archCard.armed ? "d again: delete " + archCard.t.title + " (it goes to the trash)"
+                : archCard.t.title + "  ·  " + archCard.t.counts.done + "/" + archCard.t.subs.length
               color: arow.here ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(11.5) }
             MouseArea {
               id: archMouse
@@ -3372,7 +3376,7 @@ Item {
                   ["←  z  /  →  Enter", "fold / unfold a section"], ["L", "jump to the highlighted thing's section of the log"], ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"],
                   ["click / right-click a lane item", "move it on / back"]]],
     ["Progress", [["↑ ↓", "pick"], ["Enter  Space", "expand / collapse"], ["→  ←", "open / close a todo, then fold its group"], ["A", "archive"], ["↓ past the end", "into the archive"], ["a", "jump to the archive's first item"],
-                  ["/", "search the archive"], ["Enter  r", "restore (you stay in the archive)"], ["r  on a heading", "restore the whole group / super group"], ["g  right-click", "group, restore or delete an archived list"], ["↑ at the top  Esc", "back up"]]]
+                  ["/", "search the archive"], ["Enter  r", "restore (you stay in the archive)"], ["r  on a heading", "restore the whole group / super group"], ["d d", "delete an archived todo (to the trash)"], ["g  right-click", "group, restore or delete an archived list"], ["↑ at the top  Esc", "back up"]]]
           ]
   onShowHelpChanged: if (showHelp) { helpSection = tab === "log" ? 4 : tab === "progress" ? 5 : 1; helpFlick.contentY = 0 }
   Rectangle {
