@@ -168,7 +168,7 @@ def parse(path):
                 break
             k, _, v = lines[i].partition(":")
             meta[k.strip()] = v.strip()
-    title, subs = "", []
+    title, subs, blanks = "", [], 0
     for i in range(body_start, len(lines)):
         line = lines[i]
         if not title and line.startswith("# "):
@@ -177,10 +177,22 @@ def parse(path):
         m = SUB.match(line)
         if m:
             subs.append({"line": i, "state": MARK_STATE[m.group(2)], "text": m.group(3), "indent": len(m.group(1)), "images": []})
+            blanks = 0
             continue
         m = IMG.match(line)
         if m and subs and len(m.group(1)) > subs[-1]["indent"]:
             subs[-1]["images"].append({"name": m.group(2), "path": m.group(3)})
+            continue
+        # a sub-todo's further lines: indented under it (Markdown list
+        # continuation), blank lines between paragraphs kept
+        if not line.strip():
+            blanks += 1
+            continue
+        lead = len(line) - len(line.lstrip(" "))
+        if subs and lead > subs[-1]["indent"] and not subs[-1]["images"]:
+            cut = min(lead, subs[-1]["indent"] + 2)
+            subs[-1]["text"] += "\n" * (blanks + 1) + line[cut:].rstrip()
+        blanks = 0
     return {"meta": meta, "title": title, "subs": subs, "lines": lines}
 
 
@@ -188,7 +200,10 @@ def render(todo):
     meta = todo["meta"]
     out = ["---"] + [f"{k}: {v}" for k, v in meta.items() if v != ""] + ["---", f"# {todo['title']}", ""]
     for s in todo["subs"]:
-        out.append(f"{' ' * s.get('indent', 0)}- [{STATE_MARK[s['state']]}] {s['text']}")
+        pad = " " * (s.get("indent", 0) + 2)
+        first, *more = s["text"].strip().split("\n")
+        out.append(f"{' ' * s.get('indent', 0)}- [{STATE_MARK[s['state']]}] {first}")
+        out += [(pad + ln).rstrip() for ln in more]
         for im in s.get("images", []):
             out.append(f"{' ' * (s.get('indent', 0) + 2)}![{im['name']}]({im['path']})")
     return "\n".join(out) + "\n"
@@ -313,7 +328,9 @@ def append_log(root, tid, message, by="", archived=False, sub=""):
     else:
         with open(p) as f:
             head = f.read().rstrip("\n") + "\n"
-    # heading: "## <time> · <who> · <sub-todo>" (who / sub-todo optional)
+    # heading: "## <time> · <who> · <sub-todo>" (who / sub-todo optional);
+    # a sub-todo is named by its first line
+    sub = sub.split("\n")[0].strip()
     tag = (f" · {by or 'anon'} · {sub}" if sub else f" · {by}" if by else "")
     write(p, head + f"\n## {now()}{tag}\n{message.strip()}\n")
 

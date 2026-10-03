@@ -384,7 +384,7 @@ Item {
     if (!logBySub || !selected) return logEntries.map(function(e) { return { kind: "entry", e: e, level: 0 } })
     var used = {}
     selected.subs.forEach(function(sb, i) {
-      var mine = logEntries.filter(function(e) { return e.sub === sb.text })
+      var mine = logEntries.filter(function(e) { return e.sub === sb.text.split("\n")[0].trim() })
       if (!mine.length) return
       var key = sectionKey(sb.text), shut = sectionFolded(key)
       rows.push({ kind: "head", what: "sub", i: i, sub: sb, key: key, level: 0, label: sb.text, count: mine.length, collapsed: shut })
@@ -2133,6 +2133,8 @@ Item {
         property string original: ""
         function begin(t, i) {
           if (!t || !t.subs[i]) return
+          // several lines don't fit a one-line box: edit those in the viewer
+          if (t.subs[i].text.indexOf("\n") >= 0) { tasks.openSub(t, i, true); return }
           todoId = t.id; original = t.subs[i].text
           index = i; text = original
           forceActiveFocus()
