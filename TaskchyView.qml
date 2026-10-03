@@ -924,6 +924,17 @@ Item {
     act(archived ? ["delete", id, "--archived"] : ["delete", id])
   }
   Timer { id: disarm; interval: 2500; onTriggered: tasks.armedDelete = "" }
+  // a sub-todo the same way: d marks it, d again (within 2.5 s) deletes it
+  property string armedSub: ""                // "<todo id>/<position>"
+  function removeSub(t, i) {
+    var key = t.id + "/" + i
+    if (armedSub !== key) { armedSub = key; disarmSub.restart(); return }
+    armedSub = ""
+    act(["sub-delete", t.id, String(i), "--expect", t.subs[i].text])
+    subIndex = Math.max(0, Math.min(subIndex, t.subs.length - 2))
+  }
+  Timer { id: disarmSub; interval: 2500; onTriggered: tasks.armedSub = "" }
+  onSubIndexChanged: armedSub = ""
   // the same menu on a group heading: archive or delete the whole group
   function openSuperMenu(name, x, y) {
     menu.archived = false
@@ -1147,7 +1158,7 @@ Item {
         else if (txt === "p" && t && n) openPicker(t, subIndex)
         else if (txt === "i" && t && n) togglePics(t, t.subs[subIndex])
         else if ((txt === "e" || k === Qt.Key_F2) && t && n) subEdit.begin(t, subIndex)
-        else if ((txt === "d" || k === Qt.Key_Delete) && t && n) { act(["sub-delete", t.id, String(subIndex), "--expect", t.subs[subIndex].text]); subIndex = Math.max(0, subIndex - 1) }
+        else if ((txt === "d" || k === Qt.Key_Delete) && t && n) removeSub(t, subIndex)
         else if (txt === "K" && t && subIndex > 0) { act(["sub-move", t.id, String(subIndex), String(subIndex - 1), "--expect", t.subs[subIndex].text]); subIndex-- }
         else if (txt === "J" && t && subIndex < n - 1) { act(["sub-move", t.id, String(subIndex), String(subIndex + 1), "--expect", t.subs[subIndex].text]); subIndex++ }
         else return
@@ -1662,7 +1673,7 @@ Item {
     var h
     if (viewEntry) h = "c copy · e edit" + (viewEntry.isSub ? " · p add picture · ← → pick picture · Enter show big · d d remove" : "") + " · ↑↓ scroll · Esc close"
     else if (tab === "todo") h = pane === "subs"
-      ? "↑↓ pick · Space to do → doing → done · Enter open · a add · e edit · p picture · i fold pictures · d delete · Shift ↑↓ move · L log · ← back"
+      ? "↑↓ pick · Space to do → doing → done · Enter open · a add · e edit · p picture · i fold pictures · d d delete · Shift ↑↓ move · L log · ← back"
       : cursor.indexOf("s:") === 0 || cursor.indexOf("g:") === 0
         ? "Enter fold · e rename · d d delete · g menu · A archive all · Shift ↑↓ move · L log"
         : "↑↓ pick · → open · n new · a add sub-todo · Space finish · e rename · g group · A archive · d d delete · f finished · L log"
@@ -2015,7 +2026,8 @@ Item {
           readonly property real textH: Math.max(tasks.px(32), subText.implicitHeight + 14)
           height: textH + (picsShown ? tasks.px(72) : 0)
           radius: tasks.rad
-          color: tasks.rowColor(sel, false, subMouse.containsMouse)
+          readonly property bool armed: tasks.selected !== null && tasks.armedSub === tasks.selected.id + "/" + index
+          color: armed ? tasks.armedFill : tasks.rowColor(sel, false, subMouse.containsMouse)
           border.color: sel ? tasks.accent : "transparent"
           border.width: 1
           opacity: tasks.dragSub === index ? 0.45 : 1
@@ -2030,7 +2042,7 @@ Item {
             visible: !(subEdit.activeFocus && subEdit.index === subRow.index)
             x: tasks.px(16) + 22; width: parent.width - x - 10 - (subRow.pics.length ? picChip.width + 6 : 0)
             y: (subRow.textH - implicitHeight) / 2
-            text: subRow.modelData.text
+            text: subRow.armed ? "d again: delete this sub-todo" : subRow.modelData.text
             wrapMode: Text.Wrap
             textFormat: Text.PlainText
             color: subRow.modelData.state === "doing" ? tasks.accent : tasks.fg
@@ -3370,7 +3382,7 @@ Item {
     ["Group & super group headings", [["Enter  Space  →  ←  click", "fold / unfold"], ["e", "rename"], ["d d", "delete (todos / groups are kept)"], ["A", "archive everything in it"],
                                       ["g  right-click", "menu: archive, rename, delete, into / out of a super group"], ["n  in the g menu", "new group / new super group"]]],
     ["Todo · sub-todos", [["↑ ↓", "pick"], ["Space", "to do → in progress → done"], ["Enter", "open it (c copy · e edit)"], ["p", "add a picture"], ["i", "fold its pictures"], ["a", "add"], ["e", "edit"],
-                          ["d", "delete"], ["J K  Shift ↑↓  drag", "move"], ["←  Esc", "back to the list"]]],
+                          ["d d", "delete"], ["J K  Shift ↑↓  drag", "move"], ["←  Esc", "back to the list"]]],
     ["Task Log", [["↑ ↓", "pick a todo"], ["→  Enter", "into its lanes, then ↓ on into the log"], ["→  Space  /  ←", "move a sub-todo a lane on / back"], ["Tab  Shift+Tab", "hop lanes"],
                   ["Enter", "open a sub-todo or entry"], ["c  e", "copy / edit an entry"], ["s  S", "log view: newest first · by sub-todo · all by todo · by group · by super group"],
                   ["←  z  /  →  Enter", "fold / unfold a section"], ["L", "jump to the highlighted thing's section of the log"], ["w", "write in the log (about the picked sub-todo)"], ["PgUp PgDn", "scroll the log"],

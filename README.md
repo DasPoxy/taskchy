@@ -69,10 +69,12 @@ out (or closes Taskchy), **?** shows every key, and the bar along the bottom
 always lists the keys for wherever you are. Every list scrolls to follow
 the key you're on.
 
-Deleting a todo, an archived todo, a group or a super group asks twice
-(d d). Nothing is gone for good: deleted todos go to the trash with their
-log and pictures, and a deleted sub-todo (one d) is written to a log in the
-trash you can copy it back from.
+Every delete asks twice: press d, then d again within a couple of seconds
+(the row turns red and says so; anything else cancels). That goes for todos,
+sub-todos, pictures, archived todos, groups and super groups, and for Delete
+in the right-click menus. Nothing is gone for good: deleted todos go to the
+trash with their log and pictures, and a deleted sub-todo is written to a log
+in the trash you can copy it back from.
 
 ### Themed by Omarchy
 
