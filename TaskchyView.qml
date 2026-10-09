@@ -40,6 +40,16 @@ Item {
   function px(n) { return Math.round(n * fs) }
   // a path with your home folder shown as ~
   readonly property string home: Quickshell.env("HOME") || ""
+  // log entries are shown as Markdown, but nothing in them may reach out:
+  // pictures become plain links (Qt would fetch a remote one) and raw HTML
+  // shows as text
+  function safeMarkdown(t) {
+    // code (fenced blocks, `spans`) is left exactly as written: Qt shows it literally anyway
+    return String(t || "").split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/).map(function(part, i) {
+      if (i % 2) return part
+      return part.replace(/</g, "&lt;").replace(/!\[([^\]]*)\]\(([^)]*)\)/g, "[$1]($2)")
+    }).join("")
+  }
   function shortPath(p) { return home && (p === home || p.indexOf(home + "/") === 0) ? "~" + p.slice(home.length) : p }
   // where a row's group-colour bar sits (inside its rounded end)
   readonly property real barX: Math.min(10, Math.round(rad * 0.45))
@@ -1338,6 +1348,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
     }
     Text {
+      textFormat: Text.PlainText
       id: hdText
       text: hd.text
       color: hd.strong ? tasks.fg : tasks.dim
@@ -1367,8 +1378,8 @@ Item {
       id: btnRow
       anchors.centerIn: parent
       spacing: 6
-      Text { visible: btn.icon !== ""; text: btn.icon; color: btn.on ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(btn.size); anchors.verticalCenter: parent.verticalCenter }
-      Text { visible: btn.text !== ""; text: btn.text; color: btn.on ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(btn.size); anchors.verticalCenter: parent.verticalCenter }
+      Text { textFormat: Text.PlainText; visible: btn.icon !== ""; text: btn.icon; color: btn.on ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(btn.size); anchors.verticalCenter: parent.verticalCenter }
+      Text { textFormat: Text.PlainText; visible: btn.text !== ""; text: btn.text; color: btn.on ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(btn.size); anchors.verticalCenter: parent.verticalCenter }
     }
     MouseArea { id: btnMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: btn.clicked() }
   }
@@ -1390,6 +1401,7 @@ Item {
     border.color: fieldInput.activeFocus ? tasks.accent : tasks.line
     border.width: 1
     Text {
+      textFormat: Text.PlainText
       id: fieldIcon
       x: 11
       anchors.verticalCenter: parent.verticalCenter
@@ -1425,6 +1437,7 @@ Item {
       Keys.onReturnPressed: fieldInput.accepted()
       Keys.onEnterPressed: fieldInput.accepted()
       Text {
+        textFormat: Text.PlainText
         visible: fieldInput.text === ""
         text: field.placeholder
         color: tasks.faint
@@ -1441,6 +1454,7 @@ Item {
     border.color: state3 === "todo" ? tasks.tint(tasks.fg, 0.45) : tasks.accent
     border.width: 1.5
     Text {
+      textFormat: Text.PlainText
       anchors.centerIn: parent
       text: parent.state3 === "done" ? "" : parent.state3 === "doing" ? "" : ""
       color: parent.state3 === "done" ? tasks.bg : tasks.accent
@@ -1485,9 +1499,10 @@ Item {
       x: 8 + gh.depth * 16
       spacing: 7
       anchors.verticalCenter: parent.verticalCenter
-      Text { anchors.verticalCenter: parent.verticalCenter; text: gh.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8) }
+      Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: gh.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8) }
       Dot { visible: !!gh.name; dot: tasks.colorOf(gh.name) }
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         text: gh.armed ? "d again: delete group " + gh.name + " (its todos are kept)" : !gh.name ? "No group" : gh.name
         color: gh.armed ? tasks.fg : gh.here ? tasks.accent : tasks.dim
@@ -1495,6 +1510,7 @@ Item {
         font.letterSpacing: 1.1; font.capitalization: gh.armed ? Font.MixedCase : Font.AllUppercase
       }
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         visible: gh.collapsed
         text: gh.count + " " + gh.unit + (gh.count === 1 ? "" : "s")
@@ -1531,14 +1547,16 @@ Item {
     Row {
       x: tasks.barX + 11; spacing: 8
       anchors.verticalCenter: parent.verticalCenter
-      Text { anchors.verticalCenter: parent.verticalCenter; text: sh.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8) }
-      Text { anchors.verticalCenter: parent.verticalCenter; text: ""; color: tasks.superColor(sh.name); font.family: tasks.font; font.pixelSize: tasks.px(12) }
+      Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: sh.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8) }
+      Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: ""; color: tasks.superColor(sh.name); font.family: tasks.font; font.pixelSize: tasks.px(12) }
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         text: sh.armed ? "d again: delete super group " + sh.name + " (its groups are kept)" : sh.name
         color: sh.here ? tasks.accent : tasks.fg
         font.family: tasks.font; font.bold: true; font.pixelSize: tasks.px(12.5) }
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         visible: sh.collapsed
         text: sh.count + (sh.count === 1 ? " todo" : " todos")
@@ -1580,9 +1598,10 @@ Item {
     Row {
       spacing: 10
       anchors.verticalCenter: parent.verticalCenter
-      Text { text: ""; color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(18); anchors.verticalCenter: parent.verticalCenter }
-      Text { text: "Taskchy"; color: tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(18); font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+      Text { textFormat: Text.PlainText; text: ""; color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(18); anchors.verticalCenter: parent.verticalCenter }
+      Text { textFormat: Text.PlainText; text: "Taskchy"; color: tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(18); font.bold: true; anchors.verticalCenter: parent.verticalCenter }
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         text: tasks.todos.length + (tasks.todos.length === 1 ? " todo" : " todos")
           + (tasks.doingCount ? "  ·  " + tasks.doingCount + " in progress" : "")
@@ -1594,6 +1613,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       spacing: 8
       Text {
+        textFormat: Text.PlainText
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(implicitWidth, header.width * 0.55)
         elide: Text.ElideRight
@@ -1653,13 +1673,13 @@ Item {
             id: tabLabel
             anchors.centerIn: parent
             spacing: 9
-            Text { text: tabCell.modelData[2]; color: tabCell.on ? tasks.accent : tasks.dim; font.family: tasks.font; font.pixelSize: tasks.px(13); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: tabCell.modelData[1]; color: tabCell.on ? tasks.fg : tasks.dim; font.family: tasks.font; font.pixelSize: tasks.px(13); font.bold: tabCell.on; anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: tabCell.modelData[2]; color: tabCell.on ? tasks.accent : tasks.dim; font.family: tasks.font; font.pixelSize: tasks.px(13); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: tabCell.modelData[1]; color: tabCell.on ? tasks.fg : tasks.dim; font.family: tasks.font; font.pixelSize: tasks.px(13); font.bold: tabCell.on; anchors.verticalCenter: parent.verticalCenter }
             Rectangle {
               anchors.verticalCenter: parent.verticalCenter
               width: tasks.px(16); height: width; radius: 4
               color: "transparent"; border.color: tasks.line; border.width: 1
-              Text { anchors.centerIn: parent; text: tabCell.modelData[3]; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(9) }
+              Text { textFormat: Text.PlainText; anchors.centerIn: parent; text: tabCell.modelData[3]; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(9) }
             }
           }
           MouseArea { id: tabMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { tasks.tab = tabCell.modelData[0]; tasks.forceActiveFocus() } }
@@ -1693,6 +1713,7 @@ Item {
     color: tasks.line
   }
   Text {
+    textFormat: Text.PlainText
     y: tasks.height - tasks.footerH + px(7)
     width: parent.width
     elide: Text.ElideRight
@@ -1811,11 +1832,12 @@ Item {
                 width: tasks.px(15); height: width; radius: width / 2
                 color: todoCard.t && todoCard.t.done ? tasks.accent : "transparent"
                 border.color: todoCard.t && todoCard.t.done ? tasks.accent : tasks.tint(tasks.fg, 0.45); border.width: 1.5
-                Text { anchors.centerIn: parent; visible: !!(todoCard.t && todoCard.t.done); text: ""; color: tasks.bg; font.family: tasks.font; font.pixelSize: tasks.px(8) }
+                Text { textFormat: Text.PlainText; anchors.centerIn: parent; visible: !!(todoCard.t && todoCard.t.done); text: ""; color: tasks.bg; font.family: tasks.font; font.pixelSize: tasks.px(8) }
                 MouseArea { anchors.fill: parent; anchors.margins: -4; cursorShape: Qt.PointingHandCursor
                   onClicked: tasks.act(["done", todoCard.t.id, todoCard.t.done ? "false" : "true"]) }
               }
               Text {
+                textFormat: Text.PlainText
                 x: doneBox.x + doneBox.width + 11
                 width: parent.width - x - countText.width - 22
                 anchors.verticalCenter: parent.verticalCenter
@@ -1834,11 +1856,13 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 6
                 Text {
+                  textFormat: Text.PlainText
                   visible: !!todoCard.t && todoCard.t.counts.doing > 0
                   text: ""
                   color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(8)
                   anchors.verticalCenter: parent.verticalCenter }
                 Text {
+                  textFormat: Text.PlainText
                   text: todoCard.t && todoCard.t.subs.length ? todoCard.t.counts.done + "/" + todoCard.t.subs.length : ""
                   color: tasks.faint
                   font.family: tasks.font; font.pixelSize: tasks.px(10.5)
@@ -1902,6 +1926,7 @@ Item {
             }
           }
           Text {
+            textFormat: Text.PlainText
             visible: tasks.todoRows.length === 0
             width: parent.width
             wrapMode: Text.Wrap
@@ -1939,6 +1964,7 @@ Item {
           width: parent.width
           height: tasks.px(26)
           Text {
+            textFormat: Text.PlainText
             visible: !renameInput.activeFocus
             width: parent.width
             anchors.verticalCenter: parent.verticalCenter
@@ -1974,6 +2000,7 @@ Item {
           spacing: 8
           Dot { visible: !!tasks.selected && tasks.selected.group !== ""; dot: tasks.selected ? tasks.colorOf(tasks.selected.group) : "transparent" }
           Text {
+            textFormat: Text.PlainText
             text: tasks.selected ? (tasks.selected.group ? (tasks.superOf(tasks.selected.group) ? tasks.superOf(tasks.selected.group) + "  ›  " : "") + tasks.selected.group : "no group")
               + "  ·  " + tasks.selected.counts.done + " of " + tasks.selected.subs.length + " done"
               + (tasks.selected.counts.doing ? "  ·  " + tasks.selected.counts.doing + " in progress" : "") : ""
@@ -2061,6 +2088,7 @@ Item {
             color: chipMouse.containsMouse ? tasks.hoverFill : tasks.rowFill
             border.color: tasks.line; border.width: 1
             Text {
+              textFormat: Text.PlainText
               id: chipText
               anchors.centerIn: parent
               text: " " + subRow.pics.length + "  " + (subRow.picsShown ? "" : "")
@@ -2139,6 +2167,7 @@ Item {
           }
         }
         Text {
+          textFormat: Text.PlainText
           visible: subList.count === 0
           width: parent.width
           wrapMode: Text.Wrap
@@ -2185,6 +2214,7 @@ Item {
       }
     }
     Text {
+      textFormat: Text.PlainText
       visible: tasks.selected === null
       x: todoLeft.width + 24; y: 30
       width: parent.width - x
@@ -2225,7 +2255,7 @@ Item {
             x: 12; y: 9
             spacing: 8
             Heading { text: lane.modelData[1]; mark: lane.modelData[0] === "doing" ? tasks.accent : lane.modelData[0] === "done" ? tasks.tint(tasks.accent, 0.5) : tasks.tint(tasks.fg, 0.3) }
-            Text { text: lane.items.length; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: lane.items.length; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10); anchors.verticalCenter: parent.verticalCenter }
           }
           ListView {
             id: laneList
@@ -2287,6 +2317,7 @@ Item {
             }
           }
           Text {
+            textFormat: Text.PlainText
             visible: lane.items.length === 0
             x: 12; y: tasks.px(32)
             text: tasks.selected ? "nothing here" : "pick a todo"
@@ -2358,8 +2389,9 @@ Item {
               x: tasks.barX + 12; anchors.verticalCenter: parent.verticalCenter
               width: parent.width - x - 12
               spacing: 2
-              Text { width: parent.width; elide: Text.ElideRight; text: logCard.t.title; color: logCard.cur ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(12); font.bold: logCard.sel }
+              Text { textFormat: Text.PlainText; width: parent.width; elide: Text.ElideRight; text: logCard.t.title; color: logCard.cur ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(12); font.bold: logCard.sel }
               Text {
+                textFormat: Text.PlainText
                 width: parent.width; elide: Text.ElideRight
                 text: (logCard.t.counts.doing ? " " + logCard.t.counts.doing + " in progress  ·  " : "") + logCard.t.logCount + (logCard.t.logCount === 1 ? " log entry" : " log entries")
                 color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10) }
@@ -2457,9 +2489,10 @@ Item {
             spacing: 8
             anchors.verticalCenter: parent.verticalCenter
             readonly property string what: logItem.modelData.what || ""
-            Text { anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8) }
+            Text { textFormat: Text.PlainText; anchors.verticalCenter: parent.verticalCenter; text: logItem.modelData.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8) }
             StateBox { anchors.verticalCenter: parent.verticalCenter; visible: !!logItem.modelData.sub; state3: logItem.modelData.sub ? logItem.modelData.sub.state : "todo" }
             Text {
+              textFormat: Text.PlainText
               anchors.verticalCenter: parent.verticalCenter
               visible: headRow.what === "super" || headRow.what === "todo"
               text: headRow.what === "super" ? "" : ""
@@ -2492,6 +2525,7 @@ Item {
               x: 12; y: 8
               spacing: 8
               Text {
+                textFormat: Text.PlainText
                 text: entryBox.e.time
                 color: tasks.dim
                 font.family: tasks.font; font.pixelSize: tasks.px(10); font.bold: true
@@ -2501,7 +2535,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 width: byText.implicitWidth + 12; height: byText.implicitHeight + 2; radius: height / 2
                 color: entryBox.e.by === "you" ? tasks.tint(tasks.fg, 0.08) : tasks.tint(tasks.accent, 0.16)
-                Text { id: byText; anchors.centerIn: parent; text: entryBox.e.by; color: entryBox.e.by === "you" ? tasks.dim : tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(9.5); font.bold: true }
+                Text { textFormat: Text.PlainText; id: byText; anchors.centerIn: parent; text: entryBox.e.by; color: entryBox.e.by === "you" ? tasks.dim : tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(9.5); font.bold: true }
               }
             }
             // what it's about: super group › group › todo ↳ sub-todo
@@ -2524,7 +2558,7 @@ Item {
               id: entryText
               x: 12; y: tasks.px(46)
               width: parent.width - 24
-              text: entryBox.e.text
+              text: tasks.safeMarkdown(entryBox.e.text)
               wrapMode: Text.Wrap
               textFormat: Text.MarkdownText
               color: tasks.fg
@@ -2541,6 +2575,7 @@ Item {
           }
         }
         Text {
+          textFormat: Text.PlainText
           visible: tasks.logShown.length === 0
           width: parent.width
           wrapMode: Text.Wrap
@@ -2613,20 +2648,20 @@ Item {
             visible: prow.modelData.kind === "super"
             x: tasks.barX + 11; anchors.verticalCenter: parent.verticalCenter
             spacing: 8
-            Text { text: prow.modelData.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: ""; color: tasks.superColor(prow.modelData.name); font.family: tasks.font; font.pixelSize: tasks.px(12); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: prow.modelData.kind === "super" ? prow.modelData.name : ""; color: prow.sel ? tasks.accent : tasks.fg; font.family: tasks.font; font.bold: true; font.pixelSize: tasks.px(13); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: prow.modelData.kind !== "super" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10.5); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: prow.modelData.collapsed ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: ""; color: tasks.superColor(prow.modelData.name); font.family: tasks.font; font.pixelSize: tasks.px(12); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: prow.modelData.kind === "super" ? prow.modelData.name : ""; color: prow.sel ? tasks.accent : tasks.fg; font.family: tasks.font; font.bold: true; font.pixelSize: tasks.px(13); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: prow.modelData.kind !== "super" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10.5); anchors.verticalCenter: parent.verticalCenter }
           }
           // group
           Row {
             visible: prow.modelData.kind === "group"
             x: 10; anchors.verticalCenter: parent.verticalCenter
             spacing: 8
-            Text { text: tasks.groupCollapsed(prow.modelData.name, "progress") ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: tasks.groupCollapsed(prow.modelData.name, "progress") ? "" : ""; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8); anchors.verticalCenter: parent.verticalCenter }
             Dot { visible: prow.modelData.name !== ""; dot: tasks.colorOf(prow.modelData.name) }
-            Text { text: !prow.modelData.name ? "NO GROUP" : prow.modelData.name.toUpperCase(); color: prow.sel ? tasks.accent : tasks.dim; font.family: tasks.font; font.bold: true; font.letterSpacing: 1.1; font.pixelSize: tasks.px(11); anchors.verticalCenter: parent.verticalCenter }
-            Text { text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10.5); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: !prow.modelData.name ? "NO GROUP" : prow.modelData.name.toUpperCase(); color: prow.sel ? tasks.accent : tasks.dim; font.family: tasks.font; font.bold: true; font.letterSpacing: 1.1; font.pixelSize: tasks.px(11); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: prow.modelData.kind !== "group" ? "" : prow.modelData.count + (prow.modelData.count === 1 ? " todo" : " todos"); color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10.5); anchors.verticalCenter: parent.verticalCenter }
           }
           // todo
           Row {
@@ -2634,8 +2669,9 @@ Item {
             x: tasks.barX; anchors.verticalCenter: parent.verticalCenter
             spacing: 8
             Rectangle { width: 3; height: tasks.px(18); radius: 1.5; color: prow.modelData.kind === "todo" ? tasks.colorOf(prow.modelData.t.group) : "transparent"; anchors.verticalCenter: parent.verticalCenter }
-            Text { text: prow.modelData.kind === "todo" && prow.modelData.t.subs.length ? (tasks.expanded["t:" + prow.modelData.t.id] ? "" : "") : " "; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8); anchors.verticalCenter: parent.verticalCenter }
+            Text { textFormat: Text.PlainText; text: prow.modelData.kind === "todo" && prow.modelData.t.subs.length ? (tasks.expanded["t:" + prow.modelData.t.id] ? "" : "") : " "; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(8); anchors.verticalCenter: parent.verticalCenter }
             Text {
+              textFormat: Text.PlainText
               width: prow.width * 0.42
               elide: Text.ElideRight
               text: prow.modelData.kind === "todo" ? prow.modelData.t.title : ""
@@ -2650,6 +2686,7 @@ Item {
             spacing: 8
             StateBox { state3: prow.modelData.kind === "sub" ? prow.modelData.s.state : "todo"; anchors.verticalCenter: parent.verticalCenter; scale: 0.85 }
             Text {
+              textFormat: Text.PlainText
               text: prow.modelData.kind === "sub" ? tasks.brief(prow.modelData.s.text) : ""
               color: tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(11)
               opacity: prow.modelData.kind === "sub" && prow.modelData.s.state === "done" ? 0.5 : 1
@@ -2668,6 +2705,7 @@ Item {
               : prow.modelData.kind === "todo" && prow.modelData.t.group ? tasks.colorOf(prow.modelData.t.group) : tasks.accent
           }
           Text {
+            textFormat: Text.PlainText
             id: pctText
             visible: prow.modelData.kind !== "sub"
             anchors.right: archiveBtn.visible ? archiveBtn.left : parent.right
@@ -2800,6 +2838,7 @@ Item {
             border.width: 1
             Rectangle { x: tasks.barX; width: 3; height: parent.height - 12; radius: 1.5; anchors.verticalCenter: parent.verticalCenter; color: tasks.colorOf(archCard.t.group) }
             Text {
+              textFormat: Text.PlainText
               x: 20; width: parent.width - restoreBtn.width - 30
               anchors.verticalCenter: parent.verticalCenter
               elide: Text.ElideRight
@@ -2832,6 +2871,7 @@ Item {
           }
         }
         Text {
+          textFormat: Text.PlainText
           visible: tasks.archiveRows.length === 0
           width: parent.width
           text: tasks.archiveQuery !== "" ? "Nothing in the archive matches “" + tasks.archiveQuery + "”." : "Nothing archived yet — A archives a todo (or a whole group from its heading)."
@@ -2960,6 +3000,7 @@ Item {
               spacing: 8
               Dot { visible: mi.modelData.kind === "group" && mi.modelData.name !== ""; dot: tasks.colorOf(mi.modelData.name) }
               Text {
+                textFormat: Text.PlainText
                 text: {
                   var it = mi.modelData
                   if (mi.armedHere) return "  d again: delete " + (it.kind === "deleteSuper" ? "super group " + it.name : it.kind === "delete" ? "this todo" : "group " + it.name)
@@ -2983,6 +3024,7 @@ Item {
         }
       }
       Text {
+        textFormat: Text.PlainText
         visible: menu.headGroup === "" && !menu.archived
         width: menuCol.width
         topPadding: 4
@@ -3043,6 +3085,7 @@ Item {
           spacing: 10
           Heading { text: viewer.e.isSub ? "Sub-todo" : "Log entry"; anchors.verticalCenter: parent.verticalCenter; strong: true }
           Text {
+            textFormat: Text.PlainText
             anchors.verticalCenter: parent.verticalCenter
             text: viewer.e.isSub ? viewer.e.where : viewer.e.time + (viewer.e.by ? "  ·  " + viewer.e.by : "")
             color: tasks.dim
@@ -3095,7 +3138,7 @@ Item {
         Text {
           id: viewText
           width: viewFlick.width
-          text: viewer.e.text
+          text: tasks.safeMarkdown(viewer.e.text)
           wrapMode: Text.Wrap
           textFormat: Text.MarkdownText
           color: tasks.fg
@@ -3148,13 +3191,14 @@ Item {
                   visible: pin.picked || pinHover.hovered
                   color: pin.armed ? tasks.urgent : tasks.bg
                   border.color: pin.armed ? tasks.urgent : tasks.line; border.width: 1
-                  Text { anchors.centerIn: parent; text: ""; color: pin.armed ? tasks.bg : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(10) }
+                  Text { textFormat: Text.PlainText; anchors.centerIn: parent; text: ""; color: pin.armed ? tasks.bg : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(10) }
                   MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                     onClicked: { tasks.picIndex = pin.index; if (tasks.armedPic !== pin.index) { tasks.armedPic = pin.index; disarmPic.restart() } else tasks.removePicture(viewer.e.n, pin.index) } }
                 }
               }
               HoverHandler { id: pinHover }
               Text {
+                textFormat: Text.PlainText
                 y: frame.height + 4
                 width: parent.width
                 horizontalAlignment: Text.AlignHCenter
@@ -3184,7 +3228,7 @@ Item {
         radius: tasks.rad
         color: tasks.tint(tasks.accent, 0.08)
         border.color: tasks.accent; border.width: 2
-        Text { anchors.centerIn: parent; text: "  drop to add it to this sub-todo"; color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(18) }
+        Text { textFormat: Text.PlainText; anchors.centerIn: parent; text: "  drop to add it to this sub-todo"; color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(18) }
       }
     }
 
@@ -3278,7 +3322,7 @@ Item {
           Keys.onEscapePressed: { tasks.renamingGroup = ""; tasks.renamingIsSuper = false; tasks.forceActiveFocus() }
         }
       }
-      Text { text: "Enter renames · Esc cancels"; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10) }
+      Text { textFormat: Text.PlainText; text: "Enter renames · Esc cancels"; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10) }
     }
   }
 
@@ -3340,8 +3384,8 @@ Item {
               width: parent.width - x - 10
               anchors.verticalCenter: parent.verticalCenter
               spacing: 2
-              Text { text: opt.modelData.label; color: opt.chosen ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(12); font.bold: opt.chosen }
-              Text { text: opt.modelData.detail; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10) }
+              Text { textFormat: Text.PlainText; text: opt.modelData.label; color: opt.chosen ? tasks.accent : tasks.fg; font.family: tasks.font; font.pixelSize: tasks.px(12); font.bold: opt.chosen }
+              Text { textFormat: Text.PlainText; text: opt.modelData.detail; color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10) }
             }
             MouseArea {
               id: optMouse
@@ -3354,6 +3398,7 @@ Item {
         }
       }
       Text {
+        textFormat: Text.PlainText
         width: parent.width
         topPadding: 6
         wrapMode: Text.Wrap
@@ -3442,12 +3487,14 @@ Item {
             spacing: 8
             readonly property real keyW: Math.min(tasks.px(130), width * 0.42)
             Text {
+              textFormat: Text.PlainText
               width: parent.keyW
               wrapMode: Text.Wrap
               text: parent.modelData[0]
               color: tasks.accent; font.family: tasks.font; font.pixelSize: tasks.px(11); font.bold: true
             }
             Text {
+              textFormat: Text.PlainText
               width: parent.width - parent.keyW - 8
               wrapMode: Text.Wrap
               text: parent.modelData[1]
@@ -3458,6 +3505,7 @@ Item {
       }
     }
     Text {
+      textFormat: Text.PlainText
       id: helpFoot
       x: 16
       anchors.bottom: parent.bottom; anchors.bottomMargin: 12
@@ -3484,6 +3532,7 @@ Item {
       asynchronous: true
     }
     Text {
+      textFormat: Text.PlainText
       anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 8
       text: "Esc / Enter / click to close"
       color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10.5)
@@ -3566,6 +3615,7 @@ Item {
             width: parent.width - pickHeading.width - upBtn.width - homeBtn.width - 24; height: tasks.px(26); radius: tasks.rad
             color: tasks.rowFill; border.color: tasks.line; border.width: 1
             Text {
+              textFormat: Text.PlainText
               x: 10; width: parent.width - 20; anchors.verticalCenter: parent.verticalCenter
               elide: Text.ElideLeft
               text: picker.dir.replace(picker.home, "~")
@@ -3600,6 +3650,7 @@ Item {
               color: tasks.rowColor(cell.here, false, cellMouse.containsMouse)
               border.color: cell.here ? tasks.accent : tasks.line; border.width: 1
               Text {
+                textFormat: Text.PlainText
                 visible: cell.fileIsDir
                 anchors.horizontalCenter: parent.horizontalCenter; y: 14
                 text: ""; color: cell.here ? tasks.accent : tasks.dim; font.family: tasks.font; font.pixelSize: tasks.px(38)
@@ -3613,6 +3664,7 @@ Item {
                 asynchronous: true
               }
               Text {
+                textFormat: Text.PlainText
                 x: 6; y: parent.height - tasks.px(22); width: parent.width - 12
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideMiddle
@@ -3643,6 +3695,7 @@ Item {
             event.accepted = true
           }
           Text {
+            textFormat: Text.PlainText
             visible: files.count === 0 && files.status === FolderListModel.Ready
             anchors.centerIn: parent
             text: "No pictures or folders here  (⌫ goes up)"
@@ -3650,6 +3703,7 @@ Item {
           }
         }
         Text {
+          textFormat: Text.PlainText
           text: "arrows / hjkl pick · Enter opens a folder or adds the picture · ⌫ up · ~ home · Esc closes"
           color: tasks.faint; font.family: tasks.font; font.pixelSize: tasks.px(10)
         }

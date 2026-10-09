@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "taskchy",
   "name": "Taskchy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "DasPoxy",
   "license": "MIT",
   "description": "Todos, sub-todos, a live task log and progress, fully keyboard driven and themed by your Omarchy theme. Agents drive it too, through the taskchy CLI.",

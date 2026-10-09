@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+
+      - name: Tests
+        run: python -W error::ResourceWarning -m unittest discover -s tests -v
+
+      - name: Scripts
+        run: |
+          bash -n install.sh bin/taskchy
+          shellcheck -S warning install.sh bin/taskchy
+
+      - name: Manifest
+        run: python -c "import json; m = json.load(open('manifest.json')); assert m['id'] == 'taskchy' and m['version'], m"

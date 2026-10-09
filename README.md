@@ -18,6 +18,13 @@ I figured some might be interested but didn't want a cartoon slime theme and so 
 Taskchy started as a standalone fork of Slime Shell's Slime-Tasks. It has the
 same features, a plain Omarchy look, and doesn't need Slime Shell.
 
+
+> **Status:** young and actively developed (see the [changelog](CHANGELOG.md)).
+> Your todos are plain markdown in your own notes folder, so nothing is
+> locked in: Taskchy never deletes a file outright (deletes go to
+> `.taskchy/trash` in that folder). Found a problem?
+> [Open an issue](https://github.com/DasPoxy/taskchy/issues).
+
 ## Features
 
 ### Three tabs
@@ -174,12 +181,14 @@ change afterwards, restart the shell with `omarchy-restart-shell`.
 ### Uninstall
 
 ```sh
-omarchy plugin remove taskchy
-rm ~/.local/bin/taskchy
-rm -r ~/.claude/skills/taskchy   # if you installed the skill
+~/.config/omarchy/plugins/taskchy/install.sh --uninstall
 ```
 
-Your todos stay in `~/Documents/Taskchy`.
+It says what it will do and asks first (`--yes` skips the question): it
+removes the plugin and the `taskchy` command, the Claude Code skill if
+Taskchy installed it (one you wrote yourself is left alone), and comments
+out Taskchy's key in `bindings.lua` (backed up first). Your todos stay in
+your notes folder (`~/Documents/Taskchy` unless you moved it).
 
 ### Personal tweaks
 

@@ -13,6 +13,10 @@
 #                    ~/.claude/skills/taskchy. It's copied, not linked, so a
 #                    plugin update never changes the instructions your agents
 #                    load; run this again (with the option) to refresh it.
+#   --uninstall      take Taskchy out again (asks first; --yes doesn't):
+#                    the plugin, the `taskchy` command, the skill if Taskchy
+#                    installed it, and its key in bindings.lua (commented
+#                    out, backed up). Your todos are never touched.
 set -euo pipefail
 
 here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
@@ -21,10 +25,14 @@ skill_dir="$HOME/.claude/skills/taskchy"
 marker=".installed-by-taskchy"
 
 want_skill=false
+uninstall=false
+yes=false
 for arg in "$@"; do
   case $arg in
     --claude-skill) want_skill=true ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    --uninstall) uninstall=true ;;
+    --yes|-y) yes=true ;;
+    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
     *) echo "unknown option: $arg (see --help)" >&2; exit 2 ;;
   esac
 done
@@ -63,6 +71,42 @@ link() {
   ln -sfn "$target" "$at"
   echo "linked $at -> $target"
 }
+
+# ---- uninstall ------------------------------------------------------------------
+if $uninstall; then
+  bindings="$HOME/.config/hypr/bindings.lua"
+  cli="$HOME/.local/bin/taskchy"
+  notes="$("$here/bin/taskchy" folder 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["folder"])' 2>/dev/null || echo "$HOME/Documents/Taskchy")"
+  echo "Uninstalling Taskchy:"
+  [[ -e $plugin_dir || -L $plugin_dir ]] && echo "  - disable and remove the plugin ($plugin_dir)"
+  [[ -L $cli ]] && ours "$cli" && echo "  - remove the taskchy command ($cli)"
+  [[ -f $skill_dir/$marker ]] && echo "  - remove the Claude Code skill Taskchy installed ($skill_dir)"
+  grep -qE "shell toggle taskchy" "$bindings" 2>/dev/null && echo "  - comment out its key in bindings.lua (backed up first)"
+  echo "  Your todos stay where they are: $notes"
+  if ! $yes; then
+    if [[ -t 0 ]]; then read -r -p "Go ahead? [y/N] " ok; [[ $ok == [yY]* ]] || { echo "nothing changed"; exit 1; }
+    else echo "run again with --yes to do it"; exit 2; fi
+  fi
+  if grep -qE "shell toggle taskchy" "$bindings" 2>/dev/null; then
+    cp -p "$bindings" "$bindings.before-taskchy-uninstall-$(date +%Y%m%d-%H%M%S)"
+    sed -i -E '/^[[:space:]]*--/!s/^(.*shell toggle taskchy.*)$/-- (Taskchy uninstalled) \1/' "$bindings"
+    command -v hyprctl >/dev/null && hyprctl reload >/dev/null 2>&1 || true
+    echo "commented out Taskchy's key in bindings.lua"
+  fi
+  if [[ -e $plugin_dir || -L $plugin_dir ]]; then
+    command -v omarchy-shell >/dev/null && omarchy-shell shell setPluginEnabled taskchy false >/dev/null 2>&1 || true
+    if [[ -L $plugin_dir ]] || grep -q '"id": *"taskchy"' "$plugin_dir/manifest.json" 2>/dev/null; then
+      rm -rf -- "$plugin_dir"; echo "removed $plugin_dir"
+    else
+      echo "left $plugin_dir alone: it isn't Taskchy's" >&2
+    fi
+  fi
+  if [[ -L $cli ]] && { ours "$cli" || [[ ! -e $cli ]]; }; then rm -f -- "$cli"; echo "removed $cli"; fi
+  if [[ -f $skill_dir/$marker ]]; then rm -rf -- "$skill_dir"; echo "removed $skill_dir"; fi
+  command -v omarchy-shell >/dev/null && omarchy-shell shell rescanPlugins >/dev/null 2>&1 || true
+  echo "Taskchy is uninstalled. Your todos are still in $notes."
+  exit 0
+fi
 
 # a checkout outside the plugins folder: link it in as the plugin
 if [[ $(readlink -f "$plugin_dir" 2>/dev/null) != "$here" ]]; then

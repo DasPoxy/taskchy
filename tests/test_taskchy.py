@@ -186,3 +186,87 @@ class Groups(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AgentWorkflow(unittest.TestCase):
+    """What the Claude skill drives: plan, start, log, finish, find."""
+
+    def setUp(self):
+        run("folder", "")
+        tc.ensure(ROOT)
+
+    def test_plan_start_log_finish(self):
+        r = run("plan", "Agent Project", "--group", "Work", "--sub", "one", "--sub", "two", "--by", "Claude")
+        tid = r["id"]
+        self.assertEqual(subs(tid), [("todo", "one"), ("todo", "two")])
+        run("start", tid, 0, "picking it up", "--by", "Claude")
+        self.assertEqual(subs(tid)[0][0], "doing")
+        run("log", tid, "progress", "--by", "Claude", "--sub", 0)
+        run("finish", tid, 0, "done it", "--by", "Claude")
+        self.assertEqual(subs(tid)[0][0], "done")
+        log = run("log-show", tid)["entries"]
+        self.assertEqual([e["by"] for e in log], ["Claude"] * len(log))
+        self.assertTrue(any("progress" in e["text"] for e in log))
+
+    def test_plan_again_only_adds_whats_missing(self):
+        tid = run("plan", "Reused", "--sub", "a")["id"]
+        r = run("plan", "Reused", "--sub", "a", "--sub", "b")
+        self.assertEqual(r["id"], tid)
+        self.assertEqual([t for _, t in subs(tid)], ["a", "b"])
+
+    def test_find(self):
+        tid = run("plan", "Findable Thing", "--sub", "x")["id"]
+        found = run("find", "findable")
+        self.assertIn(tid, [t["id"] for t in found["todos"]])
+
+
+class Removing(unittest.TestCase):
+    """Delete and archive keep everything recoverable."""
+
+    def setUp(self):
+        run("folder", "")
+        tc.ensure(ROOT)
+        self.tid = run("plan", "Doomed " + self._testMethodName, "--sub", "s")["id"]
+        run("log", self.tid, "a log line")
+
+    def test_delete_goes_to_the_trash_with_its_log(self):
+        run("delete", self.tid)
+        self.assertFalse(os.path.exists(todo_file(self.tid)))
+        trash = os.path.join(ROOT, ".taskchy", "trash")
+        kept = [d for d in os.listdir(trash) if d.endswith(self.tid)]
+        self.assertTrue(kept)
+        files = os.listdir(os.path.join(trash, kept[0]))
+        self.assertIn(self.tid + ".md", files)
+
+    def test_archive_and_back(self):
+        run("archive", self.tid)
+        self.assertFalse(os.path.exists(todo_file(self.tid)))
+        self.assertIn(self.tid, [t["id"] for t in run("list", "--archived")["todos"]])
+        run("unarchive", self.tid)
+        self.assertTrue(os.path.exists(todo_file(self.tid)))
+
+
+class Pictures(unittest.TestCase):
+    def setUp(self):
+        run("folder", "")
+        tc.ensure(ROOT)
+        self.tid = run("plan", "Pictures", "--sub", "s")["id"]
+
+    def test_add_and_remove(self):
+        pic = os.path.join(HOME, "my shot (1).png")
+        with open(pic, "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n")
+        run("sub-image-add", self.tid, 0, pic)
+        im = tc.summary(ROOT, self.tid)["subs"][0]["images"][0]
+        self.assertTrue(os.path.isfile(im["file"]))
+        self.assertNotIn(" ", os.path.basename(im["file"]))      # a safe file name
+        run("sub-image-remove", self.tid, 0, 0)
+        self.assertFalse(os.path.exists(im["file"]))
+        self.assertTrue(os.path.isfile(pic))                      # your original is untouched
+
+    def test_only_pictures(self):
+        doc = os.path.join(HOME, "notes.txt")
+        with open(doc, "w") as f:
+            f.write("x")
+        with self.assertRaises(tc.Fail):
+            run("sub-image-add", self.tid, 0, doc)
